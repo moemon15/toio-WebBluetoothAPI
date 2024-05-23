@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CubeController</title>
+
+  <!-- three.jsインポート -->
+  <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+          }
+        }
+      </script>
+  <!-- jsファイルインポート -->
+  <script type="module" src="main.js"></script>
+
+  <!-- cssライブラリ(buluma)インポート -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.css" />
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+    integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous" />
+  <!-- cssファイルインポート -->
+  <link rel="stylesheet" href="main.css" />
+
+</head>
+
+<body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title">操作用ボタン</h1>
+      <div class="buttons" style="margin-top: 1.5rem">
+        <button class="button is-success is-light" type="button" id="connectButton">接続</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 接続済一覧 -->
+  <div id="connectedDisplay">
+    <h1>toio接続済デバイス一覧</h1>
+  </div>
+
+  <!-- 操作ボタン -->
+  <div class="controller">
+    <div class="cross-layout">
+      <button id="move-forward" class="position-top btn cross-key-btn"><span class="top-mark">▲</span></button>
+      <button id="move-left" class="position-left btn cross-key-btn"><span class="left-mark">▲</span></button>
+      <button id="move-right" class="position-right btn cross-key-btn"><span class="right-mark">▲</span></button>
+      <button id="move-backward" class="position-bottom btn cross-key-btn"><span class="bottom-mark">▲</span></button>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PositionController</title>
+
+
+    <!-- jsファイルインポート -->
+    <script type="module" src="main.js"></script>
+
+    <!-- cssライブラリ(buluma)インポート -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.css" />
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+        integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous" />
+    <!-- cssファイルインポート -->
+    <link rel="stylesheet" href="main.css" />
+
+</head>
+
+<body>
+    <section class="section">
+        <div class="container">
+            <h1 class="title">操作用ボタン</h1>
+            <div class="buttons" style="margin-top: 1.5rem">
+                <button class="button is-success is-light" type="button" id="connectButton">接続</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 接続済一覧 -->
+    <div id="connectedDisplay">
+        <h1>toio接続済デバイス一覧</h1>
+    </div>
+
+    <!-- 現在座標の内容 -->
+    <div class="position">
+        <h1>現在座標</h1>
+        <div class="position-button">
+            <button id="get-position-continuous">連続座標取得</button>
+            <button id="get-position-continuous-stop">座標取得停止</button>
+            <button id="get-position-once">一時座標取得</button>
+            <button id="position-clear">座標クリア</button>
+        </div>
+        <div class="position-textarea">
+            <textarea id="position-display" cols="30" rows="10" style="border: 1px solid #000000;"></textarea>
+        </div>
+    </div>
+
+    </div>
+</body>
+
+</html>

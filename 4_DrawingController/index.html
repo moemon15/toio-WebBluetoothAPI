@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PositionController</title>
+
+
+    <!-- jsファイルインポート -->
+    <script type="module" src="main.js"></script>
+
+    <!-- cssライブラリ(buluma)インポート -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.css" />
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+        integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous" />
+    <!-- cssファイルインポート -->
+    <link rel="stylesheet" href="main.css" />
+
+</head>
+
+<body>
+    <section class="section">
+        <div class="container">
+            <h1 class="title">操作用ボタン</h1>
+            <div class="buttons" style="margin-top: 1.5rem">
+                <button class="button is-success is-light" type="button" id="connectButton">接続</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 接続済一覧 -->
+    <div id="connectedDisplay">
+        <h1>toio接続済デバイス一覧</h1>
+    </div>
+
+    <!-- お絵かき -->
+    <div class="draw">
+        <h1>お絵かき</h1>
+        <div class="draw-button">
+            <!--開始停止-->
+            <button id="draw-start">お絵かき開始</button>
+            <button id="draw-stop">お絵かき停止</button>
+            <!--クリア-->
+            <button id="clear-button">全消し</button>
+            <!--リプレイ-->
+            <button id="get-positon-storage">ストレージから読み出す</button>
+            <input id="deviceId" type="text" placeholder="deviceIdを入力">
+            <input type="range" id="slider" min="0" max="3" value="0" step="1">
+            <button id="replayDraw-start">リプレイ</button>
+            <button id="replayDraw-stop">リプレイ停止</button>
+        </div>
+
+        <canvas id="draw-area"></canvas>
+        <!-- style="border:5px solid black;" -->
+    </div>
+
+    <!-- ペンのスタイル設定 -->
+    <div class="columns">
+        <div class="column is-full">
+            <div class="field">
+                <label class="label">Pencil Color</label>
+                <div class="control with-color">
+                    <div class="color-palette"></div>
+                    <input id="pencilColor" class="input" type="text" size="5" name="pencilColor"
+                        placeholder="Click to open the color palette.">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="columns">
+        <div class="column is-half">
+            <div class="field">
+                <label class="label">Size</label>
+                <div class="control half">
+                    <input id="pencilSize" class="input" type="number" name="pencilSize"
+                        placeholder="The thickness of the pen.">
+                </div>
+            </div>
+        </div>
+
+        <div class="column is-half">
+            <div class="field">
+                <label class="label">Opacity</label>
+                <div class="control half">
+                    <input id="pencilOpacity" class="input" type="number" name="pencilOpacity"
+                        placeholder="Sets the opacity level." min="0" max="1" step="0.1">
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</body>
+
+</html>

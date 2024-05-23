@@ -1,0 +1,49 @@
+/* Gridレイアウト */
+.cross-layout {
+    display: grid;
+    grid-template-columns: 80px 80px 80px;
+    grid-template-rows: 80px 80px 80px;
+}
+
+.cross-layout .position-top {
+    grid-row: 1 / 2;
+    grid-column: 2 / 3;
+}
+
+.cross-layout .position-left {
+    grid-row: 2 / 3;
+    grid-column: 1 / 2;
+}
+
+.cross-layout .position-right {
+    grid-row: 2 / 3;
+    grid-column: 3/4;
+}
+
+.cross-layout .position-bottom {
+    grid-row: 3 / 4;
+    grid-column: 2/3;
+}
+
+/* コントローラー */
+.cross-key-btn {
+    width: 80px;
+    height: 80px;
+    background-color: rgba(66, 86, 123, 0.5);
+}
+
+.left-mark {
+    display: block;
+    transform: rotate(-90deg);
+}
+
+.right-mark {
+    display: block;
+    transform: rotate(90deg);
+}
+
+.bottom-mark {
+    display: block;
+    transform: rotate(180deg);
+}
+
