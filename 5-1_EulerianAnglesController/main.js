@@ -1,5 +1,4 @@
 'use strict';
-import * as THREE from "three";
 
 class BluetoothController {
   static TOIO_SERVICE_UUID = "10b20100-5b3b-4571-9508-cf3efcd7bbae";
@@ -155,127 +154,25 @@ class EulerianAnglesController {
 
     // DataViewのバイト長をチェック
     if (dataView.byteLength >= 7) {
-      console.log(`Roll.x：${value.getInt16(2, true)}`);
-      console.log(`Roll.y：${value.getInt16(4, true)}`);
-      console.log(`Roll.z：${value.getInt16(6, true)}`);
-
       this.toioNorify = dataView.getUint8(1, true);
       this.toioEulerianAngles.x = dataView.getInt16(2, true);
       this.toioEulerianAngles.y = dataView.getInt16(4, true);
       this.toioEulerianAngles.z = dataView.getInt16(6, true);
 
-      //toioのオイラー角が更新されたらDrawing3DControllerクラスのメソッドを実行
-      //drawingControllerクラスのregisterEventListeners()メソッドに定義
-      const EulerianAnglesUpdatedEvent = new CustomEvent('EulerianAnglesUpdated', {
-        detail: this.toioEulerianAngles
-      });
-      document.dispatchEvent(EulerianAnglesUpdatedEvent);
+      // console.log(`
+      // Roll.x：${this.toioEulerianAngles.x}
+      // Roll.y：${this.toioEulerianAngles.y}
+      // Roll.z：${this.toioEulerianAngles.z}`
+      // );
+
+      this.updateEulerianAnglesDisplay();
     }
   }
-}
 
-class Drawing3DController {
-  constructor(bluetoothController, eulerianAnglesController, width, height) {
-    this.bluetoothController = bluetoothController;
-    this.eulerianAnglesController = eulerianAnglesController;
-
-    //Canvasサイズ
-    this.width = width;
-    this.height = height;
-
-    // レンダラーを作成
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: document.querySelector("#myCanvas")
-    });
-
-    // シーンを作成
-    //オブジェクトや光源などの置き場
-    this.scene = new THREE.Scene();
-
-    // カメラを作成
-    //THREE.PerspectiveCamera(画角, アスペクト比, 描画開始距離, 描画終了距離)
-    this.camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
-
-    //ジオメトリ(形状)生成
-    // new THREE.BoxGeometry(幅, 高さ, 奥行き)
-    this.geometry = new THREE.BoxGeometry(500, 500, 500);
-
-    // 各面に適用するマテリアルの配列を作成
-    this.materials = [
-      new THREE.MeshBasicMaterial({ color: 0xff0000 }), // 赤
-      new THREE.MeshBasicMaterial({ color: 0x00ff00 }), // 緑
-      new THREE.MeshBasicMaterial({ color: 0x0000ff }), // 青
-      new THREE.MeshBasicMaterial({ color: 0xffff00 }), // 黄
-      new THREE.MeshBasicMaterial({ color: 0x00ffff }), // シアン
-      new THREE.MeshBasicMaterial({ color: 0xff00ff })  // マゼンタ
-    ];
-
-    // new THREE.Mesh(ジオメトリ,マテリアル)
-    this.box = new THREE.Mesh(this.geometry, this.materials);
-
-    //toioの回転順序にあわせる
-    this.camera.rotation.order = "ZYX";
-
-    // 平行光源
-    // new THREE.DirectionalLight(色)
-    this.light = new THREE.DirectionalLight(0xFFFFFF);
-
-    this.registerEulerianEventListeners();
-
-    this.init();
-  }
-
-  init = () => {
-    //レンダラー初期化
-    this.renderer.setSize(this.width, this.height);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-
-    // カメラの初期座標を設定（X座標:0, Y座標:0, Z座標:0）
-    this.camera.position.set(0, 0, 2000);
-
-    // シーンに追加
-    this.scene.add(this.box);
-
-
-    this.light.intensity = 2; // 光の強さを倍に
-    // ライトの位置を変更
-    this.light.position.set(1, 1, 1); // ライトの方向 set(X方向、Y方向、Z方向)
-    // シーンに追加
-    this.scene.add(this.light);
-
-    this.tick();
-  }
-
-  //toioの座標が更新されたらdrawメソッドを実行
-  //decodePositionDataContinuousメソッドで発火
-  registerEulerianEventListeners() {
-    document.addEventListener('EulerianAnglesUpdated', (event) => {
-      //{ x: 0, y: 0, z: 0 };
-      const EulerianAngles = event.detail;
-      // ToioのZ座標を原点に合わせるために調整
-      this.box.position.set(EulerianAngles.x, EulerianAngles.y, EulerianAngles.z - 160);
-      const radianFactor = Math.PI / 180; //度からラジアンへの変換係数
-
-      // THREE.jsはデフォルトでラジアンを使用するため、度からラジアンに変換
-      // this.box.rotation.x = EulerianAngles.x * radianFactor;
-      this.box.rotation.x = EulerianAngles.y * radianFactor; //toioのY軸回転（角度）をThree.jsオブジェクトのX軸回転に適用
-
-      // this.box.rotation.y = EulerianAngles.y * radianFactor;
-      this.box.rotation.y = -(EulerianAngles.z) * radianFactor; //toioのZ軸回転（角度）をThree.jsオブジェクトのY軸回転に適用
-
-      // this.box.rotation.z = EulerianAngles.z * radianFactor;
-      this.box.rotation.z = -(EulerianAngles.x) * radianFactor; //toioのX軸回転（角度）をThree.jsオブジェクトのZ軸回転に適用
-      // if (this.isDrawingActive) {
-      //   this.draw(event.detail);
-      // }
-    });
-  }
-
-  tick = () => {
-    requestAnimationFrame(this.tick);
-
-    // レンダリング
-    this.renderer.render(this.scene, this.camera);
+  updateEulerianAnglesDisplay() {
+    document.getElementById('roll').textContent = this.toioEulerianAngles.x;
+    document.getElementById('pitch').textContent = this.toioEulerianAngles.y;
+    document.getElementById('yaw').textContent = this.toioEulerianAngles.z;
   }
 }
 
@@ -284,7 +181,6 @@ class Drawing3DController {
 //インスタンス
 const bluetoothController = new BluetoothController();
 const eulerianAnglesController = new EulerianAnglesController(bluetoothController);
-const drawing3DController = new Drawing3DController(bluetoothController, eulerianAnglesController, 600, 600);
 
 /* イベントリスナー */
 //toio接続

@@ -28,12 +28,12 @@
 </head>
 
 <body>
+  <!-- 接続ボタン -->
   <section class="section">
     <div class="container">
       <h1 class="title">操作用ボタン</h1>
       <div class="buttons" style="margin-top: 1.5rem">
         <button class="button is-success is-light" type="button" id="connectButton">接続</button>
-        <button class="button is-info is-light" type="button" id="actionButton">一斉動作</button>
       </div>
     </div>
   </section>
@@ -51,10 +51,13 @@
       <button id="get-EulerianAngles-continuous">連続姿勢角取得</button>
       <button id="get-EulerianAngles-continuous-stop">姿勢角取得停止</button>
       <button id="get-EulerianAngles-once">一時姿勢角取得</button>
-      <!-- <button id="EulerianAngles-clear">座標クリア</button> -->
     </div>
 
-    <canvas id="myCanvas"></canvas>
+    <div class="EulerianDisplay">
+      <p>Roll: <span id="roll"></span></p>
+      <p>Pitch: <span id="pitch"></span></p>
+      <p>Yaw: <span id="yaw"></span></p>
+    </div>
   </div>
 </body>
 
