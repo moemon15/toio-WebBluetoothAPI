@@ -73,6 +73,10 @@ class PositionController {
         this.toioPosition = { x: 0, y: 0, angle: 0, sensorX: 0, sensorY: 0, sensorAngle: 0 };
         this.positionDisplay = document.getElementById('position-display');
         this.storage = localStorage;
+
+        // メソッドのバインド
+        this.PositionMissed = this.PositionMissed.bind(this);
+        this.decodePositionDataContinuous = this.decodePositionDataContinuous.bind(this);
     }
 
     async startReadingPosition() {
@@ -121,11 +125,34 @@ class PositionController {
 
     async PositionMissed(event) {
         let value = event.target.value
+        console.log(value);
+
         const dataView = new DataView(value.buffer);
         if (dataView.getUint8(0) === 0x03) {
             console.log('座標を取得できません');
+
+            // DrawingControllerのinit()に処理内容記述あり
             document.dispatchEvent(new CustomEvent('positionMissed', {
             }));
+
+            const deviceId = event.target.service.device.id; // 適切なデバイスIDを設定してください
+
+            //直前の座標データにフラグを立てる
+
+            // キャッシュを更新
+            if (this.dataCache && this.dataCache[deviceId] && this.dataCache[deviceId].length > 0) {
+                const lastPosition = this.dataCache[deviceId][this.dataCache[deviceId].length - 1];
+                lastPosition.isEndOfLine = true;
+            }
+
+            // ストレージデータのisEndOfLineフラグをtrueに
+            const storagedData = JSON.parse(this.storage.getItem(deviceId) || "[]");
+
+            if (storagedData.length > 0) {
+                const lastPosition = storagedData[storagedData.length - 1];
+                lastPosition.isEndOfLine = true;
+                this.storage.setItem(deviceId, JSON.stringify(storagedData));
+            }
         }
     }
 
@@ -181,7 +208,8 @@ class PositionController {
                 'angle': this.toioPosition.angle,
                 'sensorX': this.toioPosition.sensorX,
                 'sensorY': this.toioPosition.sensorY,
-                'sensorAngle': this.toioPosition.sensorAngle
+                'sensorAngle': this.toioPosition.sensorAngle,
+                'isEndOfLine': false
             }
 
             this.storePositionData(deviceId, PositionID);  // データストアを抽象化　追加
@@ -377,6 +405,12 @@ class DrawingController {
         this.y = null;
     }
 
+    replayDrawFinish = () => {
+        this.context.closePath(); // 現在のパスを終了
+        this.x = null;
+        this.y = null;
+    }
+
     //toioの座標が更新されたらdrawメソッドを実行
     //decodePositionDataContinuousメソッドで発火
     registerEventListeners() {
@@ -440,10 +474,19 @@ class DrawingController {
         let getdeviceId = document.getElementById('deviceId').value
         //ローカルストレージから読み出す
         this.storageData = JSON.parse(storage.getItem(getdeviceId));
-        //ストレージデータをもとに描画
-        this.storageData.forEach((point) => {
-            this.draw(point);
-        });
+
+        for (let i = 0; i < this.storageData.length; i++) {
+            const point = this.storageData[i];
+
+            if (point.isEndOfLine) {
+                this.replayDrawFinish();
+            } else {
+                if (i > 0 && !this.storageData[i - 1].isEndOfLine) {
+                    this.ReplayDraw(this.storageData[i - 1], point);
+                }
+            }
+        }
+
         this.updateSlider(this.storageData.length); // スライダーの最大値を設定
     }
 
@@ -485,11 +528,16 @@ class DrawingController {
     }
 
     drawPoints = (index) => {
-        if (index < this.storageData.length && this.storageData[index] && this.storageData[index - 1] &&
-            this.storageData[index].x !== undefined && this.storageData[index].y !== undefined &&
-            this.storageData[index - 1].x !== undefined && this.storageData[index - 1].y !== undefined) {
-            // 前回の座標から今回の座標まで線を引く
-            this.ReplayDraw(this.storageData[index - 1], this.storageData[index]);
+        if (index < this.storageData.length) {
+            const point = this.storageData[index];
+
+            if (index > 0 && !this.storageData[index - 1].isEndOfLine) {
+                this.ReplayDraw(this.storageData[index - 1], point);
+            }
+
+            if (point.isEndOfLine) {
+                this.replayDrawFinish();
+            }
         } else {
             console.error('Invalid data at index:', index); // 不正なデータがある場合はエラーを出力
         }
@@ -519,8 +567,38 @@ class DrawingController {
         this.context.stroke();
 
         // 最後の点を更新
+        // this.x = toX;
+        // this.y = toY;
+
+
+        /*
+        const toX = info.x + this.positionRegX;
+        const toY = info.y + this.positionRegY;
+
+        this.context.beginPath();
+        //透明度
+        this.context.globalAlpha = this.penOpacity;
+
+        const fromX = this.x || toX;
+        const fromY = this.y || toY;
+
+        this.context.moveTo(fromX, fromY);
+        this.context.lineTo(toX, toY);
+        //線の形状
+        this.context.lineCap = 'round';
+        //線の幅
+        this.context.lineWidth = this.penSize;
+        // this.context.lineWidth = 3;
+        //線の色
+        this.context.strokeStyle = this.penColor;
+        // this.context.strokeStyle = 'black';
+
+        //現在の線のスタイルで描画
+        this.context.stroke();
+
         this.x = toX;
         this.y = toY;
+        */
     }
 }
 
