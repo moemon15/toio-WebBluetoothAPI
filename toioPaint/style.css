@@ -2,6 +2,8 @@ body {
     font-family: system-ui;
     color: white;
     text-align: center;
+    counter-reset: section;
+    /* ここでカウンターをリセット */
 }
 
 
@@ -71,4 +73,69 @@ input[type='file'] {
     padding-top: 40px;
     display: inline-flex;
     box-shadow: 0 0.5em 1em -0.125em rgb(10 10 10 / 10%), 0 0 0 1px rgb(10 10 10 / 2%);
+}
+
+/* データベース */
+.localStorage ul {
+    list-style: none;
+    padding: 0;
+}
+
+.localStorage li {
+    background-color: #fff;
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.localStorage li:hover {
+    background-color: #e9e9f0;
+}
+
+.localStorage .details {
+    display: none;
+    margin-left: 20px;
+    padding: 10px;
+    background-color: #f9f9fb;
+    border-left: 3px solid #007bff;
+    border-radius: 0 5px 5px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ローカルストレージ */
+.devices details {
+    background-color: #fff;
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.devices details:hover {
+    background-color: #e9e9f0;
+}
+
+.devices summary {
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 5px;
+    position: relative;
+    padding-left: 25px;
+}
+
+.devices summary:before {
+    counter-increment: section;
+    content: counter(section) ". ";
+    position: absolute;
+    left: 0;
+}
+
+.devices li {
+    list-style-type: none;
+    margin: 5px 0;
 }

@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="./style.css">
     <link rel="stylesheet" href="./bluma.css">
-    <script src="https://cdn.jsdelivr.net/npm/material-design-inspired-color-picker@1.7.2/dist/md-color-picker.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/material-design-inspired-color-picker@1.7.2/dist/md-color-picker.min.js"></script>
     <script type="module" src="./main.js"></script>
 </head>
 
@@ -48,17 +49,36 @@
                             style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
                     </div>
                 </div>
+                <!-- リプレイ -->
+                <div class="card-body border rounded">
+                    <div class="row">
+                        <div class="col-6">
+                            <button class="button is-success is-light" type="button">再生</button>
+                            <button class="button is-danger is-light" type="button">停止</button>
+                        </div>
+                        <div class="col" id="replay">
+                            <input id="slider" type="range" min="0" max="100">
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="col-4">
                 <!-- 接続デバイス -->
-                <div class="card-body border rounded">
-                    <div class="row">
-                        <details>
-                            <summary>デバイス名</summary>
+                <div class="card-body border rounded devices">
+                    <details>
+                        <summary>デバイス名</summary>
+                        <ul>
                             <li>デバイスID</li>
                             <li>バッテリー</li>
-                        </details>
-                    </div>
+                        </ul>
+                    </details>
+                    <details>
+                        <summary>デバイス名2</summary>
+                        <ul>
+                            <li>デバイスID2</li>
+                            <li>バッテリー2</li>
+                        </ul>
+                    </details>
                 </div>
                 <!-- 接続ボタン -->
                 <div class="card-body border rounded">
@@ -79,34 +99,20 @@
                     <div>
                         <button class="button is-danger is-light" type="button">クリア</button>
                     </div>
-                    <div class="card-body border rounded" id="range-area">
-                        <div class="row">
-                            <!-- 太さ -->
-                            <div class="col" id="size-area">
-                                <h5 class="card-title">太さ</h5>
-                                <input id="slider" type="range" min="1" max="100" value="10"
-                                    onChange="sizeChange(this.value)">
-                                <span id="size">10</span>
-                            </div>
-                            <!-- 透明度 -->
-                            <div class="col" id="transparent-area">
-                                <h5 class="card-title">透過度</h5>
-                                <input id="slider" type="range" min="0.1" max="1" value="1" step="0.1"
-                                    onChange="alphaChange(this.value)">
-                                <span id="transparent">1</span>
-                            </div>
+                    <div class="row" id="range-area">
+                        <!-- 太さ -->
+                        <div class="col" id="size-area">
+                            <h5 class="card-title">太さ</h5>
+                            <input id="slider" type="range" min="1" max="100" value="10"
+                                onChange="sizeChange(this.value)">
+                            <span id="size">10</span>
                         </div>
-                    </div>
-                </div>
-                <!-- リプレイ -->
-                <div class="card-body border rounded">
-                    <div class="row">
-                        <div class="col-6">
-                            <button class="button is-success is-light" type="button">再生</button>
-                            <button class="button is-danger is-light" type="button">停止</button>
-                        </div>
-                        <div class="col" id="replay">
-                            <input id="slider" type="range" min="0" max="100">
+                        <!-- 透明度 -->
+                        <div class="col" id="transparent-area">
+                            <h5 class="card-title">透過度</h5>
+                            <input id="slider" type="range" min="0.1" max="1" value="1" step="0.1"
+                                onChange="alphaChange(this.value)">
+                            <span id="transparent">1</span>
                         </div>
                     </div>
                 </div>
@@ -119,19 +125,24 @@
                             value="#000000">
                         </md-color-picker>
                     </div>
-                </div>
-                <div class="columns">
-                    <div class="column is-full">
-                      <div class="field">
-                        <label class="label">カラーパレット</label>
-                        <div class="control with-color">
-                          <div class="color-palette"></div>
-                          <input id="pencilColor" class="input" type="color" size="5" name="pencilColor"
-                            placeholder="Click to open the color palette.">
+                    <div class="columns">
+                        <div class="column is-full">
+                            <div class="field">
+                                <label class="label">カラーピッカー</label>
+                                <div class="control with-color">
+                                    <div class="color-palette"></div>
+                                    <input id="pencilColor" class="input" type="color" size="5" name="pencilColor"
+                                        placeholder="Click to open the color palette.">
+                                </div>
+                            </div>
                         </div>
-                      </div>
                     </div>
-                  </div>
+                </div>
+                <!-- データベース -->
+                <div class="card-body border rounded localStorage">
+                    <h5 class="database">データ</h5>
+                    <ul id="localStorageKeys"></ul>
+                </div>
             </div>
         </div>
     </div>
