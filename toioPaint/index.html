@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>toioPaint</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./bluma.css">
+    <script src="https://cdn.jsdelivr.net/npm/material-design-inspired-color-picker@1.7.2/dist/md-color-picker.min.js"></script>
+    <script type="module" src="./main.js"></script>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-8">
+                <div class="card-header border rounded">
+                    <div class="row">
+                        <!-- ファイル選択 -->
+                        <div class="col-6">
+                            <input id="uploadfile" type="file" name="avatar" accept="image/png, image/jpeg" />
+                        </div>
+                        <!-- 座標 -->
+                        <div class="col-6 text-right">
+                            x：<span id="dispX">0</span>　y：<span id="dispY">0</span>　拡大率：<span id="dispScale">1</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Canvas -->
+                <div class="card-body border rounded" style="background-color: silver; padding: 0rem">
+                    <div id="canvas-area" width="100%" style="height: 80vh; position: relative; overflow: hidden;"
+                        class="canvas-wrapper text-center">
+                        <label id="explanation">左上ボタンから画像ファイルを選択してください。</label>
+
+                        <!-- 画像Canvas -->
+                        <canvas id="imageCanvas"
+                            style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
+                        <!-- 描画Canvas -->
+                        <canvas id="drawCanvas"
+                            style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
+                        <!-- 一時的描画Canvas(直線、短径、円用) -->
+                        <canvas id="drawTempCanvas"
+                            style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
+                        <!-- ポインタCanvas -->
+                        <canvas id="pointerCanvas"
+                            style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <!-- 接続デバイス -->
+                <div class="card-body border rounded">
+                    <div class="row">
+                        <details>
+                            <summary>デバイス名</summary>
+                            <li>デバイスID</li>
+                            <li>バッテリー</li>
+                        </details>
+                    </div>
+                </div>
+                <!-- 接続ボタン -->
+                <div class="card-body border rounded">
+                    <div class="row">
+                        <div class="col-6">
+                            <button class="button is-success is-light" type="button">接続</button>
+                            <button class="button is-danger is-light" type="button">切断</button>
+                        </div>
+                        <div class="col-6">
+                            <button class="button is-info is-light" type="button">開始</button>
+                            <button class="button is-warning is-light">終了</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- ペン -->
+                <div class="card-body border rounded">
+                    <!-- クリアボタン -->
+                    <div>
+                        <button class="button is-danger is-light" type="button">クリア</button>
+                    </div>
+                    <div class="card-body border rounded" id="range-area">
+                        <div class="row">
+                            <!-- 太さ -->
+                            <div class="col" id="size-area">
+                                <h5 class="card-title">太さ</h5>
+                                <input id="slider" type="range" min="1" max="100" value="10"
+                                    onChange="sizeChange(this.value)">
+                                <span id="size">10</span>
+                            </div>
+                            <!-- 透明度 -->
+                            <div class="col" id="transparent-area">
+                                <h5 class="card-title">透過度</h5>
+                                <input id="slider" type="range" min="0.1" max="1" value="1" step="0.1"
+                                    onChange="alphaChange(this.value)">
+                                <span id="transparent">1</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- リプレイ -->
+                <div class="card-body border rounded">
+                    <div class="row">
+                        <div class="col-6">
+                            <button class="button is-success is-light" type="button">再生</button>
+                            <button class="button is-danger is-light" type="button">停止</button>
+                        </div>
+                        <div class="col" id="replay">
+                            <input id="slider" type="range" min="0" max="100">
+                        </div>
+                    </div>
+                </div>
+                <!-- カラー -->
+                <div class="card-body border rounded" id="color-picker-area">
+                    <h5 class="card-title">色</h5>
+                    <div class="rounded" style="background-color: whitesmoke;">
+                        <md-color-picker id="colorPicker" color-margin="4" colors-per-row="7" color-size="25"
+                            default-tint="500" fixedMinHeight="true" palette="material-full" use-spectrum-picker="false"
+                            value="#000000">
+                        </md-color-picker>
+                    </div>
+                </div>
+                <div class="columns">
+                    <div class="column is-full">
+                      <div class="field">
+                        <label class="label">カラーパレット</label>
+                        <div class="control with-color">
+                          <div class="color-palette"></div>
+                          <input id="pencilColor" class="input" type="color" size="5" name="pencilColor"
+                            placeholder="Click to open the color palette.">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
