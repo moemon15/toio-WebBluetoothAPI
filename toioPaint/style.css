@@ -3,6 +3,23 @@ body {
     counter-reset: section;
 }
 
+/* Canvas */
+.canvas-wrapper {
+    height: 80vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+#imageCanvas,
+#drawCanvas {
+    top: 0px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: auto;
+    position: absolute;
+}
 
 /* ファイル選択 */
 input[type='file'] {

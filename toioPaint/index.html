@@ -27,26 +27,24 @@
                         <span class="flex-grow-1"></span>
                         <div>
                             <!-- 座標 -->
-                            x：<span id="dispX">0</span>　y：<span id="dispY">0</span>　拡大率：<span id="dispScale">1</span>
+                            x：<span id="dispX">0</span>　y：<span id="dispY">0</span>　向き：<span
+                                id="dispAngle">0</span>　拡大率：<span id="dispScale">1</span>
                         </div>
                     </div>
                     <!-- Canvas -->
-                    <div class="card-body border rounded" style="background-color: silver; padding: 0rem">
-                        <div id="canvas-area" width="100%" style="height: 80vh; position: relative; overflow: hidden;"
-                            class="canvas-wrapper text-center">
-                            <label id="explanation">左上ボタンから画像ファイルを選択してください。</label>
+                    <div class="card-body border rounded">
+                        <div id="canvas-area" class="canvas-wrapper text-center">
+                            <!-- <label id="explanation">左上ボタンから画像ファイルを選択してください。</label> -->
                             <!-- 画像Canvas -->
-                            <canvas id="imageCanvas"
-                                style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
+                            <!-- <canvas id="imageCanvas"></canvas> -->
                             <!-- 描画Canvas -->
-                            <canvas id="drawCanvas"
-                                style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
+                            <canvas id="drawCanvas"></canvas>
                             <!-- 一時的描画Canvas(直線、短径、円用) -->
-                            <canvas id="drawTempCanvas"
-                                style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
+                            <!-- <canvas id="drawTempCanvas"
+                                style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas> -->
                             <!-- ポインタCanvas -->
-                            <canvas id="pointerCanvas"
-                                style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas>
+                            <!-- <canvas id="pointerCanvas"
+                                style="top: 0px; right: 0;bottom: 0; left: 0; margin: auto; position: absolute;"></canvas> -->
                         </div>
                     </div>
                     <!-- リプレイ -->
@@ -66,38 +64,24 @@
                 <div class="card-body mb-1 border rounded">
                     <div class="row">
                         <div class="col-6 text-center">
-                            <button class="button is-success is-light" type="button">接続</button>
-                            <button class="button is-danger is-light" type="button">切断</button>
+                            <button class="button is-success is-light" type="button" id="connectButton">接続</button>
+                            <button class="button is-danger is-light" type="button" id="disconnectButton">切断</button>
                         </div>
                         <div class="col-6 text-center">
-                            <button class="button is-info is-light" type="button">開始</button>
-                            <button class="button is-warning is-light">終了</button>
+                            <button class="button is-info is-light" type="button" id="startDrawingButton">開始</button>
+                            <button class="button is-warning is-light" id="stopDrawingButton">終了</button>
                         </div>
                     </div>
                 </div>
                 <!-- 接続デバイス -->
-                <div class="card-body mb-4 border rounded devices">
-                    <details>
-                        <summary>デバイス名</summary>
-                        <ul>
-                            <li>デバイスID</li>
-                            <li>バッテリー</li>
-                        </ul>
-                    </details>
-                    <details>
-                        <summary>デバイス名2</summary>
-                        <ul>
-                            <li>デバイスID2</li>
-                            <li>バッテリー2</li>
-                        </ul>
-                    </details>
+                <div class="card-body mb-4 border rounded devices" id="device-list">
                 </div>
                 <!-- ペン -->
                 <div class="card-body mb-2 border rounded">
                     <!-- クリアボタン -->
                     <div class="row">
                         <div class="d-flex justify-content-center">
-                            <button class="button is-danger is-light" type="button">クリア</button>
+                            <button class="button is-danger is-light" type="button" id="clearButton">クリア</button>
                         </div>
                     </div>
                     <!-- 太さ・透明度 要修正-->
