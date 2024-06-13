@@ -239,7 +239,8 @@ class PositionController {
                 'sensorAngle': this.toioPosition.sensorAngle
             }
 
-            this.storePositionData(deviceId, PositionID);  // データストアを抽象化　追加
+            // データストアを抽象化　追加
+            // this.storePositionData(deviceId, PositionID);
 
             this.positionDisplayX.textContent = this.toioPosition.x;
             this.positionDisplayY.textContent = this.toioPosition.y;
@@ -256,23 +257,23 @@ class PositionController {
     }
 
     //一時的にキャッシュを作成し、５秒毎にローカルストレージに保存 連続座標取得時に使用
-    storePositionData(deviceId, data) {
-        // データの一時的なキャッシュと定期的な保存
-        if (!this.dataCache) this.dataCache = {};
-        if (!this.dataCache[deviceId]) this.dataCache[deviceId] = [];
-        this.dataCache[deviceId].push(data);
+    // storePositionData(deviceId, data) {
+    //     // データの一時的なキャッシュと定期的な保存
+    //     if (!this.dataCache) this.dataCache = {};
+    //     if (!this.dataCache[deviceId]) this.dataCache[deviceId] = [];
+    //     this.dataCache[deviceId].push(data);
 
-        if (!this.saveInterval) {
-            this.saveInterval = setInterval(() => {
-                for (const [name, positions] of Object.entries(this.dataCache)) {
-                    const storedData = JSON.parse(this.storage.getItem(name) || "[]");
-                    const updatedData = storedData.concat(positions);
-                    this.storage.setItem(name, JSON.stringify(updatedData));
-                    this.dataCache[name] = [];  // キャッシュをリセット
-                }
-            }, 5000);  // 5秒ごとに保存
-        }
-    }
+    //     if (!this.saveInterval) {
+    //         this.saveInterval = setInterval(() => {
+    //             for (const [name, positions] of Object.entries(this.dataCache)) {
+    //                 const storedData = JSON.parse(this.storage.getItem(name) || "[]");
+    //                 const updatedData = storedData.concat(positions);
+    //                 this.storage.setItem(name, JSON.stringify(updatedData));
+    //                 this.dataCache[name] = [];  // キャッシュをリセット
+    //             }
+    //         }, 5000);  // 5秒ごとに保存
+    //     }
+    // }
 
     // このケースは getPosition からのデータで呼び出された場合
     decodePositionDataOnce = (deviceId, deviceName, sensor) => {
@@ -346,10 +347,12 @@ class DrawingController {
         this.positionRegX = positionRegX;
         this.positionRegY = positionRegY;
 
+        // 初期表示サイズを設定 ブラウザ幅によってCanavsの表示サイズを動的に変化
+        this.updateDisplaySize();
+
         // スケール計算
         this.scaleX = this.canvasWidth / this.toioMatWidth;
         this.scaleY = this.canvasHeight / this.toioMatHeight;
-        console.log(`スケールX：${this.scaleX}`);
 
         // ピクセルデータの履歴を保持する配列
         // this.imagePixelDataHistory = [];
@@ -361,7 +364,6 @@ class DrawingController {
         this.init();
     }
 
-
     //初期化
     init = () => {
         // this.imageCanvas = document.getElementById('imageCanvas');
@@ -370,24 +372,10 @@ class DrawingController {
         // this.imageCtx = this.imageCanvas.getContext('2d');
         this.drawCtx = this.drawCanvas.getContext('2d');
 
-        // Canvasのサイズ（解像度）を指定
-        // this.imageCanvas.width = this.canvasWidth;
-        // this.imageCanvas.height = this.canvasHeight;
-        this.drawCanvas.width = this.canvasWidth;
-        this.drawCanvas.height = this.canvasHeight;
-        console.log(`Canvasサイズ：${this.drawCanvas.width}`);
+        this.resizeCanvas();
 
-        // CSSの表示サイズを設定
-        // this.imageCanvas.style.width = `${this.displayWidth}px`;
-        // this.imageCanvas.style.height = `${this.displayHeight}px`;
-        this.drawCanvas.style.width = `${this.displayWidth}px`;
-        this.drawCanvas.style.height = `${this.displayHeight}px`;
-        console.log(`CanvasCSSサイズ：${this.drawCanvas.style.width}`);
-
-        // Canvasの縮尺を設定
-        // this.imageCtx.scale(this.scaleX, this.scaleY);
-        this.drawCtx.scale(this.scaleX, this.scaleY);
-
+        // ウィンドウの幅が変化したときのリサイズイベントリスナー
+        window.addEventListener('resize', this.handleResize);
 
         //toioが座標を読み取れなくなったとき実行イベント
         //PositionContorollerのPositionMissedメソッドで発火
@@ -397,13 +385,50 @@ class DrawingController {
             }
         });
 
-        // this.setCanvasStyle();
     }
 
-    //CanvasStyle
-    // setCanvasStyle = () => {
-    //     this.drawCanvas.style.border = '1px solid #778899';
-    // }
+    updateDisplaySize() {
+        const cardBody = document.querySelector('.card-body');
+        this.displayWidth = cardBody.clientWidth;
+        this.displayHeight = cardBody.clientHeight;
+    }
+
+    handleResize = () => {
+        this.updateDisplaySize();
+        this.resizeCanvas();
+    }
+
+    resizeCanvas = () => {
+        // 現在のCanvasの内容を保存
+        // const imageCanvasData = this.imageCanvas ? this.imageCtx.getImageData(0, 0, this.imageCanvas.width, this.imageCanvas.height) : null;
+        const drawCanvasData = this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
+
+        // Canvasのサイズを設定
+        // this.imageCanvas.width = this.canvasWidth;
+        // this.imageCanvas.height = this.canvasHeight;
+        this.drawCanvas.width = this.canvasWidth;
+        this.drawCanvas.height = this.canvasHeight;
+
+        // CSSの表示サイズを設定
+        // this.imageCanvas.style.width = `${this.displayWidth}px`;
+        // this.imageCanvas.style.height = `${this.displayHeight}px`;
+        this.drawCanvas.style.width = `${this.displayWidth}px`;
+        this.drawCanvas.style.height = `${this.displayHeight}px`;
+
+        // Canvasの縮尺を設定
+        if (this.imageCtx) {
+            this.imageCtx.setTransform(1, 0, 0, 1, 0, 0); // 既存のスケールをリセット
+            this.imageCtx.scale(this.scaleX, this.scaleY);
+        }
+        this.drawCtx.setTransform(1, 0, 0, 1, 0, 0); // 既存のスケールをリセット
+        this.drawCtx.scale(this.scaleX, this.scaleY);
+
+        // 保存した内容を再描画
+        if (this.imageCtx && imageCanvasData) {
+            this.imageCtx.putImageData(imageCanvasData, 0, 0);
+        }
+        this.drawCtx.putImageData(drawCanvasData, 0, 0);
+    }
 
     //Canvasクリア
     clearCanvas = () => {
@@ -480,7 +505,7 @@ class DrawingController {
         //線の形状
         this.drawCtx.lineCap = 'round';
         //線の幅
-        this.drawCtx.lineWidth = 3;
+        this.drawCtx.lineWidth = 1;
         //線の色
         this.drawCtx.strokeStyle = 'black';
 
@@ -496,7 +521,7 @@ class DrawingController {
 const bluetoothController = new BluetoothController();
 const positionController = new PositionController(bluetoothController);
 /* toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY */
-const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -98, -142);
+const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -90, -140);
 
 /* イベントリスナー */
 //toio接続
