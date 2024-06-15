@@ -1,5 +1,8 @@
 'use strict';
 
+// 変数のグローバル定義
+let replayController;
+
 class BluetoothController {
     static TOIO_SERVICE_UUID = "10b20100-5b3b-4571-9508-cf3efcd7bbae";
     static MOTOR_CHARACTERISTIC_UUID = "10b20102-5b3b-4571-9508-cf3efcd7bbae";
@@ -581,6 +584,105 @@ class DrawingController {
     }
 }
 
+class ReplayController {
+    constructor(drawingController, storageController) {
+        this.drawingController = drawingController;
+        this.storageController = storageController;
+        this.slider = document.getElementById('slider');
+        this.replayInterval = null;
+        this.isReplaying = false;
+        this.storageData = [];
+
+        this.slider.oninput = () => {
+            if (!this.isReplaying) {
+                this.drawPoints(parseInt(this.slider.value, 10));
+            }
+        };
+
+        this.slider.onchange = () => {
+            this.stopReplay();
+            this.drawPoints(parseInt(this.slider.value, 10));
+        };
+    }
+
+    drawStoragePoints = (deviceName) => {
+        this.storageData = this.storageController.getData(deviceName);
+
+        this.updateSlider(this.storageData.length);
+        this.drawPoints(parseInt(this.slider.value, 10));
+    }
+
+    updateSlider = (length) => {
+        this.stopReplay();
+        this.slider.max = length - 1;
+        this.slider.value = 0;
+    }
+
+    startReplay = () => {
+        let index = parseInt(this.slider.value, 10);
+        this.isReplaying = true;
+
+        this.drawingController.clearCanvas();
+
+        clearInterval(this.replayInterval);
+        this.replayInterval = setInterval(() => {
+            if (index < this.storageData.length) {
+                this.slider.value = index;
+                this.drawPoints(index);
+                index++;
+            } else {
+                clearInterval(this.replayInterval);
+                this.isReplaying = false;
+            }
+        }, 50);
+    }
+
+    stopReplay = () => {
+        clearInterval(this.replayInterval);
+        this.isReplaying = false;
+    }
+
+    replayDrawFinish = () => {
+        this.drawingController.drawCtx.closePath(); // 現在のパスを終了
+        this.x = null;
+        this.y = null;
+    }
+
+    drawPoints = (index) => {
+        this.drawingController.clearCanvas();
+
+        for (let i = 0; i <= index; i++) {
+            const point = this.storageData[i];
+            if (i > 0 && !this.storageData[i - 1].isEndOfLine) {
+                this.ReplayDraw(this.storageData[i - 1], point);
+            }
+
+            if (point.isEndOfLine) {
+                this.replayDrawFinish();
+            }
+        }
+    }
+
+    ReplayDraw = (fromInfo, toInfo) => {
+        const fromX = fromInfo.x + this.drawingController.positionRegX;
+        const fromY = fromInfo.y + this.drawingController.positionRegY;
+        const toX = toInfo.x + this.drawingController.positionRegX;
+        const toY = toInfo.y + this.drawingController.positionRegY;
+
+        this.drawingController.drawCtx.beginPath();
+        this.drawingController.drawCtx.globalAlpha = this.drawingController.penOpacity;
+
+        this.drawingController.drawCtx.moveTo(fromX, fromY);
+        this.drawingController.drawCtx.lineTo(toX, toY);
+        this.drawingController.drawCtx.lineCap = 'round';
+        this.drawingController.drawCtx.lineWidth = this.drawingController.penSize;
+        this.drawingController.drawCtx.strokeStyle = this.drawingController.penColor;
+
+        this.drawingController.drawCtx.stroke();
+    }
+
+}
+
 class StorageController {
     constructor() {
         this.storage = localStorage;
@@ -612,7 +714,7 @@ class StorageController {
         this.storage.setItem(deviceName, JSON.stringify(data));
     }
 
-    displayLocalStorageKeys() {
+    displayLocalStorageKeys(replayController) {
         const localStorageKeys = Object.keys(this.storage);
         const ulElement = document.getElementById('localStorageKeys');
         ulElement.innerHTML = ''; // Clear existing content
@@ -620,6 +722,7 @@ class StorageController {
         localStorageKeys.forEach(key => {
             const liElement = document.createElement('li');
             liElement.textContent = key;
+            liElement.addEventListener('click', (event) => this.handleKeyClick(event, key, replayController));
             liElement.addEventListener('click', this.toggleDetails);
 
             const detailsElement = document.createElement('div');
@@ -629,6 +732,20 @@ class StorageController {
             ulElement.appendChild(liElement);
             ulElement.appendChild(detailsElement);
         });
+    }
+
+    // クリックイベントハンドラ
+    // クリックイベントのハンドラを変更
+    // handleKeyClick(event, key, replayController) {
+    //     replayController.drawStoragePoints(key);
+    // }
+
+    handleKeyClick(event, key, replayController) {
+        if (replayController) {
+            replayController.drawStoragePoints(key);
+        } else {
+            console.error('ReplayController is not defined');
+        }
     }
 
     toggleDetails(event) {
@@ -651,6 +768,12 @@ const storageController = new StorageController();
 const positionController = new PositionController(bluetoothController, storageController);
 // toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY
 const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -90, -140);
+// const replayController = new ReplayController(drawingController, storageController);
+document.addEventListener('DOMContentLoaded', () => {
+    replayController = new ReplayController(drawingController, storageController);
+    storageController.displayLocalStorageKeys(replayController); // インスタンスを渡す
+});
+
 
 
 /*
@@ -720,10 +843,22 @@ document.getElementById('uploadfile').addEventListener('change', function (event
     };
     reader.readAsDataURL(file);
 });
+
 // ローカルストレージデータ取得
 document.addEventListener('DOMContentLoaded', () => {
-    storageController.displayLocalStorageKeys();
+    storageController.displayLocalStorageKeys(replayController);
 });
+
+//リプレイ
+document.getElementById('replayDraw-start').addEventListener('click', () => {
+    replayController.startReplay();
+});
+
+//リプレイ停止
+document.getElementById('replayDraw-stop').addEventListener('click', () => {
+    replayController.stopReplay();
+});
+
 
 
 
