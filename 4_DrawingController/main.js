@@ -475,6 +475,7 @@ class DrawingController {
         //ローカルストレージから読み出す
         this.storageData = JSON.parse(storage.getItem(getdeviceId));
 
+<<<<<<< Updated upstream
         for (let i = 0; i < this.storageData.length; i++) {
             const point = this.storageData[i];
 
@@ -488,6 +489,10 @@ class DrawingController {
         }
 
         this.updateSlider(this.storageData.length); // スライダーの最大値を設定
+=======
+        this.updateSlider(this.storageData.length);
+        this.drawPoints(parseInt(this.slider.value, 10));
+>>>>>>> Stashed changes
     }
 
     updateSlider = (length) => {
@@ -500,8 +505,13 @@ class DrawingController {
 
     //読み出した座標をリプレイで再生
     startReplay = () => {
+<<<<<<< Updated upstream
         let index = 0;
         this.isReplaying = true; // リプレイを開始する
+=======
+        let index = parseInt(this.slider.value, 10);
+        this.isReplaying = true;
+>>>>>>> Stashed changes
 
         const slider = this.slider;
         const storageData = this.storageData;
@@ -637,9 +647,13 @@ document.getElementById('get-positon-storage').addEventListener('click', () => {
 
 //リプレイ
 document.getElementById('replayDraw-start').addEventListener('click', () => {
+<<<<<<< Updated upstream
     drawingController.drawStoragePoints(); // 最初にストレージから座標を読み出す
     drawingController.clearCanvas();
     drawingController.startReplay(); // リプレイ開始
+=======
+    replayController.startReplay();
+>>>>>>> Stashed changes
 });
 
 //リプレイ停止
