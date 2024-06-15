@@ -126,7 +126,6 @@ class PositionController {
 
     async PositionMissed(event) {
         let value = event.target.value
-        console.log(value);
 
         const dataView = new DataView(value.buffer);
         if (dataView.getUint8(0) === 0x03) {
@@ -136,23 +135,24 @@ class PositionController {
             document.dispatchEvent(new CustomEvent('positionMissed', {
             }));
 
-            const deviceId = event.target.service.device.id; // 適切なデバイスIDを設定してください
+            const deviceId = event.target.service.device.id;
+            const deviceName = event.target.service.device.name;
 
             //直前の座標データにフラグを立てる
 
             // キャッシュを更新
-            if (this.storageController.dataCache && this.storageController.dataCache[deviceId] && this.storageController.dataCache[deviceId].length > 0) {
-                const lastPosition = this.storageController.dataCache[deviceId][this.storageController.dataCache[deviceId].length - 1];
+            if (this.storageController.dataCache && this.storageController.dataCache[deviceName] && this.storageController.dataCache[deviceName].length > 0) {
+                const lastPosition = this.storageController.dataCache[deviceName][this.storageController.dataCache[deviceName].length - 1];
                 lastPosition.isEndOfLine = true;
             }
 
             // ストレージデータのisEndOfLineフラグをtrueに
-            const storagedData = JSON.parse(this.storageController.getData(deviceId) || "[]");
+            const storagedData = this.storageController.getData(deviceName) || [];
 
             if (storagedData.length > 0) {
                 const lastPosition = storagedData[storagedData.length - 1];
                 lastPosition.isEndOfLine = true;
-                this.storageController.saveData(deviceId, JSON.stringify(storagedData));
+                this.storageController.saveData(deviceName, storagedData);
             }
         }
     }
@@ -201,7 +201,7 @@ class PositionController {
             document.dispatchEvent(positionUpdatedEvent);
 
             //ローカルストレージに保存
-            const PositionID = {
+            const positionData = {
                 'deviceName': deviceName,
                 'deviceId': deviceId,
                 'x': this.toioPosition.x,
@@ -213,7 +213,7 @@ class PositionController {
                 'isEndOfLine': false
             }
 
-            this.storageController.storePositionData(deviceId, PositionID);  // データストアを抽象化　追加
+            this.storageController.storePositionData(deviceName, positionData);  // データストアを抽象化
         } else {
             //  console.error('Received data is too short.');
         }
@@ -232,7 +232,7 @@ class PositionController {
             this.toioPosition.sensorAngle = dataView.getUint16(11, true);
 
             //ローカルストレージに保存
-            const PositionID = {
+            const positionData = {
                 'daviceName': deviceName,
                 'deviceID': deviceId,
                 'x': this.toioPosition.x,
@@ -243,17 +243,14 @@ class PositionController {
                 'sensorAngle': this.toioPosition.sensorAngle
             }
 
-            // デバイスID毎にローカルストレージからデータを取得し、存在しない場合は新しい配列を作成
-            let deviceData = JSON.parse(this.storage.getItem(deviceId) || "[]");
+            // deviceName毎にローカルストレージからデータを取得し、存在しない場合は新しい配列を作成
+            let deviceData = JSON.parse(this.storage.getItem(deviceName) || "[]");
 
             // データを追加
-            deviceData.push(PositionID);
+            deviceData.push(positionData);
 
             // ローカルストレージに保存
-            this.storage.setItem(deviceId, JSON.stringify(deviceData));
-
-            this.positionDisplay.value = this.positionDisplay.value + `X: ${this.toioPosition.x}, Y: ${this.toioPosition.y}, Angle: ${this.toioPosition.angle}\n`;
-            this.positionDisplay.scrollTop = this.positionDisplay.scrollHeight; // 自動スクロール
+            this.storage.setItem(deviceName, JSON.stringify(deviceData));
 
             // console.log('キューブの中心の X 座標値:', dataView.getUint16(1, true));
             // console.log('キューブの中心の Y 座標値:', dataView.getUint16(3, true));
@@ -542,29 +539,29 @@ class StorageController {
         this.dataCache = {};
     }
 
-    storePositionData(deviceId, data) {
-        if (!this.dataCache[deviceId]) this.dataCache[deviceId] = [];
-        this.dataCache[deviceId].push(data);
+    storePositionData(devieName, data) {
+        if (!this.dataCache[devieName]) this.dataCache[devieName] = [];
+        this.dataCache[devieName].push(data);
 
         if (!this.saveInterval) {
             this.saveInterval = setInterval(() => {
-                for (const [id, positions] of Object.entries(this.dataCache)) {
-                    const storedData = this.getData(id) || [];
+                for (const [name, positions] of Object.entries(this.dataCache)) {
+                    const storedData = this.getData(name) || [];
                     const updatedData = storedData.concat(positions);
-                    this.saveData(id, updatedData);
-                    this.dataCache[id] = [];
+                    this.saveData(name, updatedData);
+                    this.dataCache[name] = [];
                 }
             }, 5000);
         }
     }
 
-    getData(deviceId) {
-        const data = this.storage.getItem(deviceId);
+    getData(deviceName) {
+        const data = this.storage.getItem(deviceName);
         return data ? JSON.parse(data) : [];
     }
 
-    saveData(deviceId, data) {
-        this.storage.setItem(deviceId, JSON.stringify(data));
+    saveData(deviceName, data) {
+        this.storage.setItem(deviceName, JSON.stringify(data));
     }
 }
 
