@@ -118,13 +118,18 @@ class PositionController {
     =============================================
     */
 
-    constructor(bluetoothController) {
+    constructor(bluetoothController, storageController) {
         this.bluetoothController = bluetoothController;
+        this.storageController = storageController;
+
         this.toioPosition = { x: 0, y: 0, angle: 0, sensorX: 0, sensorY: 0, sensorAngle: 0 };
         this.positionDisplayX = document.getElementById('dispX');
         this.positionDisplayY = document.getElementById('dispY');
         this.angleDisplay = document.getElementById('dispAngle');
-        this.storage = localStorage;
+
+        // メソッドのバインド
+        this.PositionMissed = this.PositionMissed.bind(this);
+        this.decodePositionDataContinuous = this.decodePositionDataContinuous.bind(this);
     }
 
     async startReadingPosition() {
@@ -174,10 +179,29 @@ class PositionController {
     async PositionMissed(event) {
         let value = event.target.value
         const dataView = new DataView(value.buffer);
+
         if (dataView.getUint8(0) === 0x03) {
             console.log('座標を取得できません');
+
+            // DrawingControllerのinit()に処理内容記述あり
             document.dispatchEvent(new CustomEvent('positionMissed', {
             }));
+
+            const deviceName = event.target.service.device.name;
+
+            // キャッシュを更新
+            if (this.storageController.dataCache && this.storageController.dataCache[deviceName] && this.storageController.dataCache[deviceName].length > 0) {
+                const lastPosition = this.storageController.dataCache[deviceName][this.storageController.dataCache[deviceName].length - 1];
+                lastPosition.isEndOfLine = true;
+            }
+
+            const storagedData = this.storageController.getData(deviceName) || [];
+
+            if (storagedData.length > 0) {
+                const lastPosition = storagedData[storagedData.length - 1];
+                lastPosition.isEndOfLine = true;
+                this.storageController.saveData(deviceName, storagedData);
+            }
         }
     }
 
@@ -228,7 +252,7 @@ class PositionController {
             document.dispatchEvent(positionUpdatedEvent);
 
             //ローカルストレージに保存
-            const PositionID = {
+            const positionData = {
                 'deviceName': deviceName,
                 'deviceId': deviceId,
                 'x': this.toioPosition.x,
@@ -236,11 +260,12 @@ class PositionController {
                 'angle': this.toioPosition.angle,
                 'sensorX': this.toioPosition.sensorX,
                 'sensorY': this.toioPosition.sensorY,
-                'sensorAngle': this.toioPosition.sensorAngle
+                'sensorAngle': this.toioPosition.sensorAngle,
+                'isEndOfLine': false
             }
 
-            // データストアを抽象化　追加
-            // this.storePositionData(deviceId, PositionID);
+            // データストアを抽象化
+            this.storageController.storePositionData(deviceName, positionData);
 
             this.positionDisplayX.textContent = this.toioPosition.x;
             this.positionDisplayY.textContent = this.toioPosition.y;
@@ -256,25 +281,6 @@ class PositionController {
         }
     }
 
-    //一時的にキャッシュを作成し、５秒毎にローカルストレージに保存 連続座標取得時に使用
-    // storePositionData(deviceId, data) {
-    //     // データの一時的なキャッシュと定期的な保存
-    //     if (!this.dataCache) this.dataCache = {};
-    //     if (!this.dataCache[deviceId]) this.dataCache[deviceId] = [];
-    //     this.dataCache[deviceId].push(data);
-
-    //     if (!this.saveInterval) {
-    //         this.saveInterval = setInterval(() => {
-    //             for (const [name, positions] of Object.entries(this.dataCache)) {
-    //                 const storedData = JSON.parse(this.storage.getItem(name) || "[]");
-    //                 const updatedData = storedData.concat(positions);
-    //                 this.storage.setItem(name, JSON.stringify(updatedData));
-    //                 this.dataCache[name] = [];  // キャッシュをリセット
-    //             }
-    //         }, 5000);  // 5秒ごとに保存
-    //     }
-    // }
-
     // このケースは getPosition からのデータで呼び出された場合
     decodePositionDataOnce = (deviceId, deviceName, sensor) => {
         const dataView = new DataView(sensor.buffer);
@@ -288,7 +294,7 @@ class PositionController {
             this.toioPosition.sensorAngle = dataView.getUint16(11, true);
 
             //ローカルストレージに保存
-            const PositionID = {
+            const positionData = {
                 'daviceName': deviceName,
                 'deviceID': deviceId,
                 'x': this.toioPosition.x,
@@ -300,13 +306,13 @@ class PositionController {
             }
 
             // デバイスID毎にローカルストレージからデータを取得し、存在しない場合は新しい配列を作成
-            let deviceData = JSON.parse(this.storage.getItem(deviceId) || "[]");
+            let deviceData = JSON.parse(this.storage.getItem(deviceName) || "[]");
 
             // データを追加
-            deviceData.push(PositionID);
+            deviceData.push(positionData);
 
             // ローカルストレージに保存
-            this.storage.setItem(deviceId, JSON.stringify(deviceData));
+            this.storage.setItem(deviceName, JSON.stringify(deviceData));
 
             // console.log('キューブの中心の X 座標値:', dataView.getUint16(1, true));
             // console.log('キューブの中心の Y 座標値:', dataView.getUint16(3, true));
@@ -575,13 +581,46 @@ class DrawingController {
     }
 }
 
+class StorageController {
+    constructor() {
+        this.storage = localStorage;
+        this.dataCache = {};
+    }
+
+    storePositionData(deviceName, data) {
+        if (!this.dataCache[deviceName]) this.dataCache[deviceName] = [];
+        this.dataCache[deviceName].push(data);
+
+        if (!this.saveInterval) {
+            this.saveInterval = setInterval(() => {
+                for (const [name, positions] of Object.entries(this.dataCache)) {
+                    const storedData = this.getData(name) || [];
+                    const updatedData = storedData.concat(positions);
+                    this.saveData(name, updatedData);
+                    this.dataCache[name] = [];
+                }
+            }, 5000);
+        }
+    }
+
+    getData(deviceName) {
+        const data = this.storage.getItem(deviceName);
+        return data ? JSON.parse(data) : [];
+    }
+
+    saveData(deviceName, data) {
+        this.storage.setItem(deviceName, JSON.stringify(data));
+    }
+}
+
 /*
 ==============================
 インスタンス
 ==============================
 */
 const bluetoothController = new BluetoothController();
-const positionController = new PositionController(bluetoothController);
+const storageController = new StorageController();
+const positionController = new PositionController(bluetoothController, storageController);
 // toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY
 const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -90, -140);
 
