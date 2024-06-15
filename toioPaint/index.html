@@ -36,7 +36,7 @@
                         <div id="canvas-area" class="canvas-wrapper text-center">
                             <!-- <label id="explanation">左上ボタンから画像ファイルを選択してください。</label> -->
                             <!-- 画像Canvas -->
-                            <!-- <canvas id="imageCanvas"></canvas> -->
+                            <canvas id="imageCanvas"></canvas>
                             <!-- 描画Canvas -->
                             <canvas id="drawCanvas"></canvas>
                             <!-- 一時的描画Canvas(直線、短径、円用) -->
@@ -88,14 +88,13 @@
                     <div class="row" id="range-area">
                         <div class="col-md-6 center-content" id="size-area">
                             <h5>太さ</h5>
-                            <input id="slider" type="range" min="1" max="100" value="10"
-                                onChange="sizeChange(this.value)">
+                            <input id="size-slider" type="range" min="1" max="100" value="10">
                             <span id="size">10</span>
                         </div>
                         <div class="col-md-6 center-content">
                             <div id="transparent-area">
                                 <h5>透過度</h5>
-                                <input id="slider" type="range" min="0.1" max="1" value="1" step="0.1"
+                                <input id="alpha-slider" type="range" min="0.1" max="1" value="1" step="0.1"
                                     onChange="alphaChange(this.value)">
                                 <span id="transparent">1</span>
                             </div>

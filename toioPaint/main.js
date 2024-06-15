@@ -322,6 +322,11 @@ class DrawingController {
         // 描画の有効/無効を制御するフラグ
         this.isDrawingActive = false;
 
+        // ペンの初期値を設定
+        this.lineWidth = 3;
+        this.alpha = 1;
+        this.color = '#000000';
+
         this.registerEventListeners();
 
         /*
@@ -364,15 +369,36 @@ class DrawingController {
         this.init();
     }
 
-    //初期化
+    /*
+    ==============================
+    初期化
+    ==============================
+    */
     init = () => {
-        // this.imageCanvas = document.getElementById('imageCanvas');
+        this.imageCanvas = document.getElementById('imageCanvas');
         this.drawCanvas = document.getElementById('drawCanvas');
 
-        // this.imageCtx = this.imageCanvas.getContext('2d');
+        this.imageCtx = this.imageCanvas.getContext('2d');
         this.drawCtx = this.drawCanvas.getContext('2d');
 
         this.resizeCanvas();
+
+        // ペンの初期化
+        document.getElementById('size').textContent = this.lineWidth;
+        document.getElementById('size-slider').value = this.lineWidth;
+        document.getElementById('transparent').textContent = this.alpha;
+        document.getElementById('alpha-slider').value = this.alpha;
+
+        // スライダーの変更イベント
+        document.getElementById('size-slider').addEventListener('input', (event) => {
+            this.setLineWidth(event.target.value);
+        });
+        document.getElementById('alpha-slider').addEventListener('input', (event) => {
+            this.setAlpha(event.target.value);
+        });
+        document.getElementById('pencilColor').addEventListener('input', (event) => {
+            this.setColor(event.target.value);
+        });
 
         // ウィンドウの幅が変化したときのリサイズイベントリスナー
         window.addEventListener('resize', this.handleResize);
@@ -387,6 +413,11 @@ class DrawingController {
 
     }
 
+    /*
+    ==============================
+    Canvasサイズ設定
+    ==============================
+    */
     updateDisplaySize() {
         const cardBody = document.querySelector('.card-body');
         this.displayWidth = cardBody.clientWidth;
@@ -400,18 +431,18 @@ class DrawingController {
 
     resizeCanvas = () => {
         // 現在のCanvasの内容を保存
-        // const imageCanvasData = this.imageCanvas ? this.imageCtx.getImageData(0, 0, this.imageCanvas.width, this.imageCanvas.height) : null;
+        const imageCanvasData = this.imageCanvas ? this.imageCtx.getImageData(0, 0, this.imageCanvas.width, this.imageCanvas.height) : null;
         const drawCanvasData = this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
 
         // Canvasのサイズを設定
-        // this.imageCanvas.width = this.canvasWidth;
-        // this.imageCanvas.height = this.canvasHeight;
+        this.imageCanvas.width = this.canvasWidth;
+        this.imageCanvas.height = this.canvasHeight;
         this.drawCanvas.width = this.canvasWidth;
         this.drawCanvas.height = this.canvasHeight;
 
         // CSSの表示サイズを設定
-        // this.imageCanvas.style.width = `${this.displayWidth}px`;
-        // this.imageCanvas.style.height = `${this.displayHeight}px`;
+        this.imageCanvas.style.width = `${this.displayWidth}px`;
+        this.imageCanvas.style.height = `${this.displayHeight}px`;
         this.drawCanvas.style.width = `${this.displayWidth}px`;
         this.drawCanvas.style.height = `${this.displayHeight}px`;
 
@@ -430,15 +461,37 @@ class DrawingController {
         this.drawCtx.putImageData(drawCanvasData, 0, 0);
     }
 
+    /*
+    ==============================
+    描画処理
+    ==============================
+    */
+
+    // ペン設定
+    // 太さ
+    setLineWidth(value) {
+        this.lineWidth = value;
+        document.getElementById('size').textContent = value;
+    }
+
+    // 透過度
+    setAlpha(value) {
+        this.alpha = value;
+        document.getElementById('transparent').textContent = value;
+    }
+
+    // 色
+    setColor(value) {
+        this.color = value;
+    }
+
     //Canvasクリア
     clearCanvas = () => {
         this.drawCtx.clearRect(0, 0, this.drawCanvas.width, this.drawCanvas.height);
         // this.setCanvasStyle();
     }
 
-    /**
-    * toioから座標が取れなくなったら、座標をリセット
-    */
+    // toioから座標が取れなくなったら、座標をリセット
     drawFinish = () => {
         this.x = null;
         this.y = null;
@@ -463,9 +516,7 @@ class DrawingController {
         this.isDrawingActive = false;
     }
 
-    /**
-   * 描画処理 
-   */
+    /* 描画処理 */
     draw = (info) => {
         const toX = info.x + this.positionRegX;
         const toY = info.y + this.positionRegY;
@@ -473,6 +524,12 @@ class DrawingController {
         const scale = 2;
         const PixeltoX = (info.x + this.positionRegX) * scale;
         const PixeltoY = (info.y + this.positionRegY) * scale;
+
+        /*
+        ==================
+        採点機能　ピクセルデータ取得・保存
+        ==================
+        */
 
         // if (this.imageCtx) {
         //     // imageCtxピクセルデータの取得
@@ -494,20 +551,21 @@ class DrawingController {
         // this.drawPixelDataHistory.push(Array.from(drawPixelData));
 
         this.drawCtx.beginPath();
-        //透明度
-        // this.drawCtx.globalAlpha = this.penOpacity;
 
         const fromX = this.x || toX;
         const fromY = this.y || toY;
 
         this.drawCtx.moveTo(fromX, fromY);
         this.drawCtx.lineTo(toX, toY);
+
         //線の形状
         this.drawCtx.lineCap = 'round';
         //線の幅
-        this.drawCtx.lineWidth = 1;
+        this.drawCtx.lineWidth = this.lineWidth;
         //線の色
-        this.drawCtx.strokeStyle = 'black';
+        this.drawCtx.strokeStyle = this.color;
+        //透明度
+        this.drawCtx.globalAlpha = this.alpha;
 
         //現在の線のスタイルで描画
         this.drawCtx.stroke();
@@ -517,13 +575,22 @@ class DrawingController {
     }
 }
 
-//インスタンス
+/*
+==============================
+インスタンス
+==============================
+*/
 const bluetoothController = new BluetoothController();
 const positionController = new PositionController(bluetoothController);
-/* toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY */
+// toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY
 const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -90, -140);
 
-/* イベントリスナー */
+
+/*
+==============================
+イベントリスナー
+==============================
+*/
 //toio接続
 document.getElementById('connectButton').addEventListener('click', () => bluetoothController.connect());
 //toio切断
@@ -543,48 +610,49 @@ document.getElementById('clearButton').addEventListener('click', () => {
     console.log('Canvasクリアボタンがクリックされました');
     drawingController.clearCanvas();
 });
+
 // 画像ファイルをCanvasに描画
-// document.getElementById('uploadfile').addEventListener('change', function (event) {
-//     const file = event.target.files[0];
-//     if (!file) {
-//         return;
-//     }
+document.getElementById('uploadfile').addEventListener('change', function (event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
 
-//     if (file.type.indexOf("image") < 0) {
-//         alert("画像ファイルを指定してください。");
-//         return false;
-//     }
+    if (file.type.indexOf("image") < 0) {
+        alert("画像ファイルを指定してください。");
+        return false;
+    }
 
-//     const reader = new FileReader();
-//     reader.onload = function (e) {
-//         const img = new Image();
-//         img.onload = function () {
-//             const canvas = document.getElementById('imageCanvas');
-//             const ctx = canvas.getContext('2d');
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+            const canvas = document.getElementById('imageCanvas');
+            const ctx = canvas.getContext('2d');
 
-//             // canvasエリアと画像のスケールを計算（縦・横 スケール値が低い方を採用）
-//             const scale = Math.min(
-//                 document.getElementById('canvas-area').offsetWidth / img.naturalWidth,
-//                 document.getElementById('canvas-area').offsetHeight / img.naturalHeight
-//             );
+            // canvasエリアと画像のスケールを計算（縦・横 スケール値が低い方を採用）
+            const scale = Math.min(
+                document.getElementById('canvas-area').offsetWidth / img.naturalWidth,
+                document.getElementById('canvas-area').offsetHeight / img.naturalHeight
+            );
 
-//             // canvasエリアの高さ・幅を設定
-//             canvas.width = img.width * scale;
-//             canvas.height = img.height * scale;
+            // canvasエリアの高さ・幅を設定
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
 
-//             document.getElementById('drawCanvas').width = canvas.width;
-//             document.getElementById('drawCanvas').height = canvas.height;
+            document.getElementById('drawCanvas').width = canvas.width;
+            document.getElementById('drawCanvas').height = canvas.height;
 
-//             // 画像を縮小して設定
-//             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // 画像を縮小して設定
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-//             // 説明文を非表示に
-//             document.getElementById('explanation').style.display = 'none';
-//         };
-//         img.src = e.target.result;
-//     };
-//     reader.readAsDataURL(file);
-// });
+            // 説明文を非表示に
+            // document.getElementById('explanation').style.display = 'none';
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+});
 
 
 
