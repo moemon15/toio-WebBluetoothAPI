@@ -611,6 +611,34 @@ class StorageController {
     saveData(deviceName, data) {
         this.storage.setItem(deviceName, JSON.stringify(data));
     }
+
+    displayLocalStorageKeys() {
+        const localStorageKeys = Object.keys(this.storage);
+        const ulElement = document.getElementById('localStorageKeys');
+        ulElement.innerHTML = ''; // Clear existing content
+
+        localStorageKeys.forEach(key => {
+            const liElement = document.createElement('li');
+            liElement.textContent = key;
+            liElement.addEventListener('click', this.toggleDetails);
+
+            const detailsElement = document.createElement('div');
+            detailsElement.className = 'details';
+            detailsElement.textContent = `${key}: ${this.storage.getItem(key)}`;
+
+            ulElement.appendChild(liElement);
+            ulElement.appendChild(detailsElement);
+        });
+    }
+
+    toggleDetails(event) {
+        const detailsElement = event.currentTarget.nextElementSibling;
+        if (detailsElement.style.display === 'none' || !detailsElement.style.display) {
+            detailsElement.style.display = 'block';
+        } else {
+            detailsElement.style.display = 'none';
+        }
+    }
 }
 
 /*
@@ -691,6 +719,10 @@ document.getElementById('uploadfile').addEventListener('change', function (event
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+});
+// ローカルストレージデータ取得
+document.addEventListener('DOMContentLoaded', () => {
+    storageController.displayLocalStorageKeys();
 });
 
 
