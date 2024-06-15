@@ -68,11 +68,12 @@ class PositionController {
     =============================================
     */
 
-    constructor(bluetoothController) {
+    constructor(bluetoothController, storageController) {
         this.bluetoothController = bluetoothController;
+        this.storageController = storageController;
+
         this.toioPosition = { x: 0, y: 0, angle: 0, sensorX: 0, sensorY: 0, sensorAngle: 0 };
         this.positionDisplay = document.getElementById('position-display');
-        this.storage = localStorage;
 
         // メソッドのバインド
         this.PositionMissed = this.PositionMissed.bind(this);
@@ -140,18 +141,18 @@ class PositionController {
             //直前の座標データにフラグを立てる
 
             // キャッシュを更新
-            if (this.dataCache && this.dataCache[deviceId] && this.dataCache[deviceId].length > 0) {
-                const lastPosition = this.dataCache[deviceId][this.dataCache[deviceId].length - 1];
+            if (this.storageController.dataCache && this.storageController.dataCache[deviceId] && this.storageController.dataCache[deviceId].length > 0) {
+                const lastPosition = this.storageController.dataCache[deviceId][this.storageController.dataCache[deviceId].length - 1];
                 lastPosition.isEndOfLine = true;
             }
 
             // ストレージデータのisEndOfLineフラグをtrueに
-            const storagedData = JSON.parse(this.storage.getItem(deviceId) || "[]");
+            const storagedData = JSON.parse(this.storageController.getData(deviceId) || "[]");
 
             if (storagedData.length > 0) {
                 const lastPosition = storagedData[storagedData.length - 1];
                 lastPosition.isEndOfLine = true;
-                this.storage.setItem(deviceId, JSON.stringify(storagedData));
+                this.storageController.saveData(deviceId, JSON.stringify(storagedData));
             }
         }
     }
@@ -212,28 +213,9 @@ class PositionController {
                 'isEndOfLine': false
             }
 
-            this.storePositionData(deviceId, PositionID);  // データストアを抽象化　追加
+            this.storageController.storePositionData(deviceId, PositionID);  // データストアを抽象化　追加
         } else {
             //  console.error('Received data is too short.');
-        }
-    }
-
-    //一時的にキャッシュを作成し、５秒毎にローカルストレージに保存 連続座標取得時に使用
-    storePositionData(deviceId, data) {
-        // データの一時的なキャッシュと定期的な保存
-        if (!this.dataCache) this.dataCache = {};
-        if (!this.dataCache[deviceId]) this.dataCache[deviceId] = [];
-        this.dataCache[deviceId].push(data);
-
-        if (!this.saveInterval) {
-            this.saveInterval = setInterval(() => {
-                for (const [name, positions] of Object.entries(this.dataCache)) {
-                    const storedData = JSON.parse(this.storage.getItem(name) || "[]");
-                    const updatedData = storedData.concat(positions);
-                    this.storage.setItem(name, JSON.stringify(updatedData));
-                    this.dataCache[name] = [];  // キャッシュをリセット
-                }
-            }, 5000);  // 5秒ごとに保存
         }
     }
 
@@ -295,7 +277,6 @@ class DrawingController {
         this.isDrawingActive = false;  // 描画の有効/無効を制御するフラグ
         this.registerEventListeners();
         this.storageData = {}; //ローカルストレージから読み出したオブジェクトを保存
-        this.replayInterval; //リプレイインターバル宣言
         this.slider = document.getElementById('slider');
         this.isReplaying = false; // リプレイがアクティブかどうかを追跡するフラグ
 
@@ -385,10 +366,6 @@ class DrawingController {
     //CanvasStyle
     setCanvasStyle = () => {
         this.canvas.style.border = '1px solid #778899';
-        //Canvas背景設定
-        //this.context.beginPath();
-        //this.context.fillStyle = "#f5f5f5";
-        //this.context.fillRect(0, 0, this.width, this.height);
     }
 
     //Canvasクリア
@@ -450,10 +427,8 @@ class DrawingController {
         this.context.lineCap = 'round';
         //線の幅
         this.context.lineWidth = this.penSize;
-        // this.context.lineWidth = 3;
         //線の色
         this.context.strokeStyle = this.penColor;
-        // this.context.strokeStyle = 'black';
 
         //現在の線のスタイルで描画
         this.context.stroke();
@@ -462,143 +437,134 @@ class DrawingController {
         this.y = toY;
     }
 
-    /*
-    =================
-   リプレイ描画
-   ==================
-   */
-    // ストレージから読み出した座標を描画する関数
-    drawStoragePoints = () => {
-        const storage = this.positionController.storage;
-        //テキストボックスからdeviceIdを取得
-        let getdeviceId = document.getElementById('deviceId').value
-        //ローカルストレージから読み出す
-        this.storageData = JSON.parse(storage.getItem(getdeviceId));
+}
 
-        for (let i = 0; i < this.storageData.length; i++) {
-            const point = this.storageData[i];
+class ReplayController {
+    constructor(drawingController, storageController) {
+        this.drawingController = drawingController;
+        this.storageController = storageController;
+        this.slider = document.getElementById('slider');
+        this.replayInterval = null;
+        this.isReplaying = false;
+        this.storageData = [];
 
-            if (point.isEndOfLine) {
-                this.replayDrawFinish();
-            } else {
-                if (i > 0 && !this.storageData[i - 1].isEndOfLine) {
-                    this.ReplayDraw(this.storageData[i - 1], point);
-                }
+        this.slider.oninput = () => {
+            if (!this.isReplaying) {
+                this.drawPoints(parseInt(this.slider.value, 10));
             }
-        }
+        };
 
-        this.updateSlider(this.storageData.length); // スライダーの最大値を設定
+        this.slider.onchange = () => {
+            this.stopReplay();
+            this.drawPoints(parseInt(this.slider.value, 10));
+        };
+    }
+
+    drawStoragePoints = () => {
+        const deviceId = this.getDeviceId();
+        this.storageData = this.storageController.getData(deviceId);
+
+        this.updateSlider(this.storageData.length);
+        this.drawPoints(0); // 初期位置を描画
     }
 
     updateSlider = (length) => {
-        this.stopReplay(); // リプレイを停止
-        this.slider.max = length - 1; // スライダーの最大値を設定
-        this.slider.oninput = () => {
-            this.drawPoints(this.slider.value); // スライダーが動かされたときの処理
-        }
+        this.stopReplay();
+        this.slider.max = length - 1;
+        this.slider.value = 0;
     }
 
-    //読み出した座標をリプレイで再生
     startReplay = () => {
         let index = 0;
-        this.isReplaying = true; // リプレイを開始する
+        this.isReplaying = true;
 
-        const slider = this.slider;
-        const storageData = this.storageData;
-        const replayInterval = this.replayInterval;
-        const drawPoints = this.drawPoints.bind(this);
+        this.drawingController.clearCanvas();
 
-        this.clearCanvas(); // キャンバスをクリア
-
-        clearInterval(replayInterval); // 既存のインターバルをクリア
-        this.replayInterval = setInterval(function () {
-            if (index < storageData.length) {
-                slider.value = index; // スライダーの位置を更新
-                drawPoints(index);
+        clearInterval(this.replayInterval);
+        this.replayInterval = setInterval(() => {
+            if (index < this.storageData.length) {
+                this.slider.value = index;
+                this.drawPoints(index);
                 index++;
             } else {
-                clearInterval(replayInterval); // 全ての点を描画したらインターバルを停止
+                clearInterval(this.replayInterval);
+                this.isReplaying = false;
             }
         }, 50);
     }
 
     stopReplay = () => {
         clearInterval(this.replayInterval);
-        this.isReplaying = false; // リプレイが非アクティブであることを示す
+        this.isReplaying = false;
     }
 
     drawPoints = (index) => {
-        if (index < this.storageData.length) {
-            const point = this.storageData[index];
+        this.drawingController.clearCanvas();
 
-            if (index > 0 && !this.storageData[index - 1].isEndOfLine) {
-                this.ReplayDraw(this.storageData[index - 1], point);
+        for (let i = 0; i <= index; i++) {
+            const point = this.storageData[i];
+            if (i > 0 && !this.storageData[i - 1].isEndOfLine) {
+                this.ReplayDraw(this.storageData[i - 1], point);
             }
 
             if (point.isEndOfLine) {
-                this.replayDrawFinish();
+                this.drawingController.replayDrawFinish();
             }
-        } else {
-            console.error('Invalid data at index:', index); // 不正なデータがある場合はエラーを出力
         }
     }
 
-    //リプレイ描画処理
     ReplayDraw = (fromInfo, toInfo) => {
-        const fromX = fromInfo.x + this.positionRegX;
-        const fromY = fromInfo.y + this.positionRegY;
-        const toX = toInfo.x + this.positionRegX;
-        const toY = toInfo.y + this.positionRegY;
+        const fromX = fromInfo.x + this.drawingController.positionRegX;
+        const fromY = fromInfo.y + this.drawingController.positionRegY;
+        const toX = toInfo.x + this.drawingController.positionRegX;
+        const toY = toInfo.y + this.drawingController.positionRegY;
 
-        this.context.beginPath();
-        //透明度
-        this.context.globalAlpha = this.penOpacity;
+        this.drawingController.context.beginPath();
+        this.drawingController.context.globalAlpha = this.drawingController.penOpacity;
 
-        this.context.moveTo(fromX, fromY);
-        this.context.lineTo(toX, toY);
-        //線の形状
-        this.context.lineCap = 'round';
-        //線の幅
-        this.context.lineWidth = this.penSize;
-        //線の色
-        this.context.strokeStyle = this.penColor;
+        this.drawingController.context.moveTo(fromX, fromY);
+        this.drawingController.context.lineTo(toX, toY);
+        this.drawingController.context.lineCap = 'round';
+        this.drawingController.context.lineWidth = this.drawingController.penSize;
+        this.drawingController.context.strokeStyle = this.drawingController.penColor;
 
-        //現在の線のスタイルで描画
-        this.context.stroke();
+        this.drawingController.context.stroke();
+    }
 
-        // 最後の点を更新
-        // this.x = toX;
-        // this.y = toY;
+    getDeviceId = () => {
+        return document.getElementById('deviceId').value;
+    }
+}
 
+class StorageController {
+    constructor() {
+        this.storage = localStorage;
+        this.dataCache = {};
+    }
 
-        /*
-        const toX = info.x + this.positionRegX;
-        const toY = info.y + this.positionRegY;
+    storePositionData(deviceId, data) {
+        if (!this.dataCache[deviceId]) this.dataCache[deviceId] = [];
+        this.dataCache[deviceId].push(data);
 
-        this.context.beginPath();
-        //透明度
-        this.context.globalAlpha = this.penOpacity;
+        if (!this.saveInterval) {
+            this.saveInterval = setInterval(() => {
+                for (const [id, positions] of Object.entries(this.dataCache)) {
+                    const storedData = this.getData(id) || [];
+                    const updatedData = storedData.concat(positions);
+                    this.saveData(id, updatedData);
+                    this.dataCache[id] = [];
+                }
+            }, 5000);
+        }
+    }
 
-        const fromX = this.x || toX;
-        const fromY = this.y || toY;
+    getData(deviceId) {
+        const data = this.storage.getItem(deviceId);
+        return data ? JSON.parse(data) : [];
+    }
 
-        this.context.moveTo(fromX, fromY);
-        this.context.lineTo(toX, toY);
-        //線の形状
-        this.context.lineCap = 'round';
-        //線の幅
-        this.context.lineWidth = this.penSize;
-        // this.context.lineWidth = 3;
-        //線の色
-        this.context.strokeStyle = this.penColor;
-        // this.context.strokeStyle = 'black';
-
-        //現在の線のスタイルで描画
-        this.context.stroke();
-
-        this.x = toX;
-        this.y = toY;
-        */
+    saveData(deviceId, data) {
+        this.storage.setItem(deviceId, JSON.stringify(data));
     }
 }
 
@@ -606,8 +572,10 @@ class DrawingController {
 
 /* インスタンス */
 const bluetoothController = new BluetoothController();
-const positionController = new PositionController(bluetoothController);
+const storageController = new StorageController();
+const positionController = new PositionController(bluetoothController, storageController);
 const drawingController = new DrawingController(bluetoothController, positionController, 608, 432, -100, -140);
+const replayController = new ReplayController(drawingController, storageController);
 
 
 /* イベントリスナー */
@@ -632,17 +600,17 @@ document.getElementById('clear-button').addEventListener('click', () => {
 //ストレージから座標を読み出す
 document.getElementById('get-positon-storage').addEventListener('click', () => {
     drawingController.clearCanvas();
-    drawingController.drawStoragePoints();
+    replayController.drawStoragePoints();
 });
 
 //リプレイ
 document.getElementById('replayDraw-start').addEventListener('click', () => {
-    drawingController.drawStoragePoints(); // 最初にストレージから座標を読み出す
+    replayController.drawStoragePoints();
     drawingController.clearCanvas();
-    drawingController.startReplay(); // リプレイ開始
+    replayController.startReplay();
 });
 
 //リプレイ停止
 document.getElementById('replayDraw-stop').addEventListener('click', () => {
-    drawingController.stopReplay();
+    replayController.stopReplay();
 });
