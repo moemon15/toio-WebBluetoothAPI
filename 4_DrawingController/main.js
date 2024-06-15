@@ -147,12 +147,12 @@ class PositionController {
             }
 
             // ストレージデータのisEndOfLineフラグをtrueに
-            const storagedData = JSON.parse(this.storageController.getData(deviceName) || "[]");
+            const storagedData = this.storageController.getData(deviceName) || [];
 
             if (storagedData.length > 0) {
                 const lastPosition = storagedData[storagedData.length - 1];
                 lastPosition.isEndOfLine = true;
-                this.storageController.saveData(deviceName, JSON.stringify(storagedData));
+                this.storageController.saveData(deviceName, storagedData);
             }
         }
     }
