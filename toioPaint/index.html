@@ -50,7 +50,7 @@
                     <!-- リプレイ -->
                     <div class="card-footer border rounded d-flex flex-column">
                         <div id="replay">
-                            <input id="slider" type="range" min="0" max="10" value="0" step="1">
+                            <input class="form-range" id="slider" type="range" min="0" max="10" value="0" step="1">
                         </div>
                         <div>
                             <button class="button is-success is-light" id="replayDraw-start" type="button">再生</button>
@@ -80,21 +80,33 @@
                 <div class="card-body mb-2 border rounded">
                     <!-- クリアボタン -->
                     <div class="row">
-                        <div class="d-flex justify-content-center">
-                            <button class="button is-danger is-light" type="button" id="clearButton">クリア</button>
+                        <div class="col">
+                            <div class="d-flex justify-content-center align-items-center">
+                                <div class="form-check me-2">
+                                    <input class="form-check-input" type="radio" name="mode" value="1" checked>
+                                    <label class="form-check-label h6" for="penRadio">ペン</label>
+                                </div>
+                                <div class="form-check me-2">
+                                    <input class="form-check-input" type="radio" name="mode" value="2">
+                                    <label class="form-check-label h6" for="eraserRadio">消しゴム</label>
+                                </div>
+                                <div class="form-check me-2">
+                                    <button class="button is-danger is-light" type="button" id="clearButton">クリア</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <!-- 太さ・透明度 要修正-->
+                    <!-- 太さ・透明度 -->
                     <div class="row" id="range-area">
                         <div class="col-md-6 center-content" id="size-area">
                             <h5>太さ</h5>
-                            <input id="size-slider" type="range" min="1" max="100" value="10">
+                            <input class="form-range" id="size-slider" type="range" min="1" max="100" value="10">
                             <span id="size">10</span>
                         </div>
                         <div class="col-md-6 center-content">
                             <div id="transparent-area">
                                 <h5>透過度</h5>
-                                <input id="alpha-slider" type="range" min="0.1" max="1" value="1" step="0.1"
+                                <input class="form-range" id="alpha-slider" type="range" min="0.1" max="1" value="1" step="0.1"
                                     onChange="alphaChange(this.value)">
                                 <span id="transparent">1</span>
                             </div>

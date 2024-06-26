@@ -12,7 +12,6 @@ class BluetoothController {
 
     constructor() {
         this.devices = new Map();
-        this.connectedDisplay = document.getElementById('connectedDisplay');
     }
 
     async connect() {
@@ -375,6 +374,8 @@ class DrawingController {
         this.x = null;
         this.y = null;
 
+        this.mode = 'pen';
+
         this.init();
     }
 
@@ -476,6 +477,10 @@ class DrawingController {
     ==============================
     */
 
+    setMode(mode) {
+        this.mode = mode;
+    }
+
     // ペン設定
     // 太さ
     setLineWidth(value) {
@@ -571,10 +576,16 @@ class DrawingController {
         this.drawCtx.lineCap = 'round';
         //線の幅
         this.drawCtx.lineWidth = this.lineWidth;
-        //線の色
-        this.drawCtx.strokeStyle = this.color;
-        //透明度
-        this.drawCtx.globalAlpha = this.alpha;
+
+        if (this.mode === 'pen') {
+            //線の色
+            this.drawCtx.strokeStyle = this.color;
+            //透明度
+            this.drawCtx.globalAlpha = this.alpha;
+        } else if( this.mode === 'eraser') {
+            this.drawCtx.strokeStyle = 'white';
+            this.drawCtx.globalAlpha = 1;
+        }
 
         //現在の線のスタイルで描画
         this.drawCtx.stroke();
@@ -771,7 +782,7 @@ const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -
 // const replayController = new ReplayController(drawingController, storageController);
 document.addEventListener('DOMContentLoaded', () => {
     replayController = new ReplayController(drawingController, storageController);
-    storageController.displayLocalStorageKeys(replayController); // インスタンスを渡す
+    storageController.displayLocalStorageKeys(replayController);
 });
 
 
@@ -790,15 +801,31 @@ document.getElementById('startDrawingButton').addEventListener('click', () => {
     console.log('お絵かき開始ボタンがクリックされました');
     positionController.startReadingPosition();
     drawingController.startDrawing();
-})
+});
 document.getElementById('stopDrawingButton').addEventListener('click', () => {
     console.log('お絵かき停止ボタンがクリックされました');
     positionController.stopReadingPosition();
     drawingController.stopDrawing();
-})
+});
 document.getElementById('clearButton').addEventListener('click', () => {
     console.log('Canvasクリアボタンがクリックされました');
     drawingController.clearCanvas();
+});
+
+// モード切り替え
+document.addEventListener('DOMContentLoaded', () => {
+    const modeRadios = document.querySelectorAll('input[name="mode"]');
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', (event) => {
+            if (event.target.value === '1') {
+                drawingController.setMode('pen');
+                console.log('ペンに切り替わりました');
+            } else if (event.target.value === '2') {
+                drawingController.setMode('eraser');
+                console.log('消しゴムに切り替わりました');
+            }
+        });
+    });
 });
 
 // 画像ファイルをCanvasに描画
