@@ -327,13 +327,15 @@ class PositionController {
 class DrawingController {
 
     constructor(toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY) {
+        this.storageController = storageController;
+
         // 描画の有効/無効を制御するフラグ
         this.isDrawingActive = false;
 
         // ペンの初期値を設定
-        this.lineWidth = 3;
-        this.alpha = 1;
         this.color = '#000000';
+        this.alpha = 1;
+        this.lineWidth = 3;
 
         this.registerEventListeners();
 
@@ -482,22 +484,27 @@ class DrawingController {
     }
 
     // ペン設定
-    // 太さ
-    setLineWidth(value) {
-        this.lineWidth = value;
-        document.getElementById('size').textContent = value;
+    // 色
+    setColor(value) {
+        this.color = value;
+        this.storageController.updateDrawingState(this.color, this.alpha, this.lineWidth);
     }
 
     // 透過度
     setAlpha(value) {
         this.alpha = value;
         document.getElementById('transparent').textContent = value;
+        this.storageController.updateDrawingState(this.color, this.alpha, this.lineWidth);
     }
 
-    // 色
-    setColor(value) {
-        this.color = value;
+    // 太さ
+    setLineWidth(value) {
+        this.lineWidth = value;
+        document.getElementById('size').textContent = value;
+        this.storageController.updateDrawingState(this.color, this.alpha, this.lineWidth);
     }
+
+
 
     //Canvasクリア
     clearCanvas = () => {
@@ -582,7 +589,7 @@ class DrawingController {
             this.drawCtx.strokeStyle = this.color;
             //透明度
             this.drawCtx.globalAlpha = this.alpha;
-        } else if( this.mode === 'eraser') {
+        } else if (this.mode === 'eraser') {
             this.drawCtx.strokeStyle = 'white';
             this.drawCtx.globalAlpha = 1;
         }
@@ -681,13 +688,14 @@ class ReplayController {
         const toY = toInfo.y + this.drawingController.positionRegY;
 
         this.drawingController.drawCtx.beginPath();
-        this.drawingController.drawCtx.globalAlpha = this.drawingController.penOpacity;
+        this.drawingController.drawCtx.strokeStyle = toInfo.color || this.drawingController.color;
+        this.drawingController.drawCtx.globalAlpha = toInfo.alpha || this.drawingController.alpha;
+        this.drawingController.drawCtx.lineWidth = toInfo.lineWidth || this.drawingController.lineWidth;
 
         this.drawingController.drawCtx.moveTo(fromX, fromY);
         this.drawingController.drawCtx.lineTo(toX, toY);
         this.drawingController.drawCtx.lineCap = 'round';
-        this.drawingController.drawCtx.lineWidth = this.drawingController.penSize;
-        this.drawingController.drawCtx.strokeStyle = this.drawingController.penColor;
+
 
         this.drawingController.drawCtx.stroke();
     }
@@ -698,11 +706,27 @@ class StorageController {
     constructor() {
         this.storage = localStorage;
         this.dataCache = {};
+
+        this.currentDrawingState = {
+            color: '#000000',
+            alpha: 1,
+            lineWidth: 3
+        };
+    }
+
+    updateDrawingState(color, alpha, lineWidth) {
+        this.currentDrawingState = { color, alpha, lineWidth };
     }
 
     storePositionData(deviceName, data) {
         if (!this.dataCache[deviceName]) this.dataCache[deviceName] = [];
-        this.dataCache[deviceName].push(data);
+
+        const graphicProperties = {
+            ...data,
+            ...this.currentDrawingState
+        };
+
+        this.dataCache[deviceName].push(graphicProperties);
 
         if (!this.saveInterval) {
             this.saveInterval = setInterval(() => {
@@ -778,7 +802,7 @@ const bluetoothController = new BluetoothController();
 const storageController = new StorageController();
 const positionController = new PositionController(bluetoothController, storageController);
 // toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY
-const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -90, -140);
+const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -90, -140, storageController);
 // const replayController = new ReplayController(drawingController, storageController);
 document.addEventListener('DOMContentLoaded', () => {
     replayController = new ReplayController(drawingController, storageController);
