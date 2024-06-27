@@ -337,6 +337,8 @@ class DrawingController {
         this.alpha = 1;
         this.lineWidth = 3;
 
+        this.mode = 'pen';
+
         this.registerEventListeners();
 
         /*
@@ -362,21 +364,16 @@ class DrawingController {
         this.positionRegX = positionRegX;
         this.positionRegY = positionRegY;
 
-        // 初期表示サイズを設定 ブラウザ幅によってCanavsの表示サイズを動的に変化
-        this.updateDisplaySize();
-
         // スケール計算
         this.scaleX = this.canvasWidth / this.toioMatWidth;
         this.scaleY = this.canvasHeight / this.toioMatHeight;
 
         // ピクセルデータの履歴を保持する配列
-        // this.imagePixelDataHistory = [];
-        // this.drawPixelDataHistory = [];
+        this.imagePixelDataHistory = [];
+        this.drawPixelDataHistory = [];
 
         this.x = null;
         this.y = null;
-
-        this.mode = 'pen';
 
         this.init();
     }
@@ -393,7 +390,8 @@ class DrawingController {
         this.imageCtx = this.imageCanvas.getContext('2d');
         this.drawCtx = this.drawCanvas.getContext('2d');
 
-        this.resizeCanvas();
+        // Canvas初期化
+        this.setCanvas();
 
         // ペンの初期化
         document.getElementById('size').textContent = this.lineWidth;
@@ -412,9 +410,6 @@ class DrawingController {
             this.setColor(event.target.value);
         });
 
-        // ウィンドウの幅が変化したときのリサイズイベントリスナー
-        window.addEventListener('resize', this.handleResize);
-
         //toioが座標を読み取れなくなったとき実行イベント
         //PositionContorollerのPositionMissedメソッドで発火
         document.addEventListener('positionMissed', (event) => {
@@ -430,21 +425,8 @@ class DrawingController {
     Canvasサイズ設定
     ==============================
     */
-    updateDisplaySize() {
-        const cardBody = document.querySelector('.card-body');
-        this.displayWidth = cardBody.clientWidth;
-        this.displayHeight = cardBody.clientHeight;
-    }
 
-    handleResize = () => {
-        this.updateDisplaySize();
-        this.resizeCanvas();
-    }
-
-    resizeCanvas = () => {
-        // 現在のCanvasの内容を保存
-        const imageCanvasData = this.imageCanvas ? this.imageCtx.getImageData(0, 0, this.imageCanvas.width, this.imageCanvas.height) : null;
-        const drawCanvasData = this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
+    setCanvas = () => {
 
         // Canvasのサイズを設定
         this.imageCanvas.width = this.canvasWidth;
@@ -459,18 +441,12 @@ class DrawingController {
         this.drawCanvas.style.height = `${this.displayHeight}px`;
 
         // Canvasの縮尺を設定
-        if (this.imageCtx) {
-            this.imageCtx.setTransform(1, 0, 0, 1, 0, 0); // 既存のスケールをリセット
-            this.imageCtx.scale(this.scaleX, this.scaleY);
-        }
-        this.drawCtx.setTransform(1, 0, 0, 1, 0, 0); // 既存のスケールをリセット
+        // 既存のスケールをリセット
+        this.imageCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.imageCtx.scale(this.scaleX, this.scaleY);
+        // 既存のスケールをリセット
+        this.drawCtx.setTransform(1, 0, 0, 1, 0, 0);
         this.drawCtx.scale(this.scaleX, this.scaleY);
-
-        // 保存した内容を再描画
-        if (this.imageCtx && imageCanvasData) {
-            this.imageCtx.putImageData(imageCanvasData, 0, 0);
-        }
-        this.drawCtx.putImageData(drawCanvasData, 0, 0);
     }
 
     /*
@@ -542,34 +518,33 @@ class DrawingController {
         const toX = info.x + this.positionRegX;
         const toY = info.y + this.positionRegY;
 
-        const scale = 2;
-        const PixeltoX = (info.x + this.positionRegX) * scale;
-        const PixeltoY = (info.y + this.positionRegY) * scale;
+        const PixeltoX = (info.x + this.positionRegX) * this.scaleX;
+        const PixeltoY = (info.y + this.positionRegY) * this.scaleY;
 
         /*
         ==================
-        採点機能　ピクセルデータ取得・保存
+        ピクセルデータ取得・保存
         ==================
         */
 
-        // if (this.imageCtx) {
-        //     // imageCtxピクセルデータの取得
-        //     const imagePixelData = this.imageCtx.getImageData(PixeltoX, PixeltoY, 1, 1).data;
-        //     // 履歴として保持
-        //     this.imagePixelDataHistory.push(Array.from(imagePixelData));
-        // }
+        if (this.imageCtx) {
+            // imageCtxピクセルデータの取得
+            const imagePixelData = this.imageCtx.getImageData(PixeltoX, PixeltoY, 1, 1).data;
+            // 履歴として保持
+            this.imagePixelDataHistory.push(Array.from(imagePixelData));
+        }
 
         // imageCtxピクセルデータの取得
-        // const imagePixelData = this.imageCtx.getImageData(PixeltoX, PixeltoY, 1, 1).data;
-        // console.log(`画像ピクセル (${PixeltoX}, ${PixeltoY}):`, imagePixelData);
+        const imagePixelData = this.imageCtx.getImageData(PixeltoX, PixeltoY, 1, 1).data;
+        console.log(`画像ピクセル (${PixeltoX}, ${PixeltoY}):`, imagePixelData);
 
         // drawCtxピクセルデータの取得
-        // const drawPixelData = this.drawCtx.getImageData(PixeltoX, PixeltoY, 1, 1).data;
-        // console.log(`描画ピクセル (${PixeltoX}, ${PixeltoY}):`, drawPixelData);
+        const drawPixelData = this.drawCtx.getImageData(PixeltoX, PixeltoY, 1, 1).data;
+        console.log(`描画ピクセル (${PixeltoX}, ${PixeltoY}):`, drawPixelData);
 
         // 履歴として保持
-        // this.imagePixelDataHistory.push(Array.from(imagePixelData));
-        // this.drawPixelDataHistory.push(Array.from(drawPixelData));
+        this.imagePixelDataHistory.push(Array.from(imagePixelData));
+        this.drawPixelDataHistory.push(Array.from(drawPixelData));
 
         this.drawCtx.beginPath();
 
@@ -871,24 +846,21 @@ document.getElementById('uploadfile').addEventListener('change', function (event
             const canvas = document.getElementById('imageCanvas');
             const ctx = canvas.getContext('2d');
 
-            // canvasエリアと画像のスケールを計算（縦・横 スケール値が低い方を採用）
-            const scale = Math.min(
-                document.getElementById('canvas-area').offsetWidth / img.naturalWidth,
-                document.getElementById('canvas-area').offsetHeight / img.naturalHeight
-            );
+            // 画像のアスペクト比を維持しながら、Canvasのサイズに合わせて描画
+            // const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+            // const width = img.width * scale;
+            // const height = img.height * scale;
+            // const x = (canvas.width - width) / 2;
+            // const y = (canvas.height - height) / 2;
+            // console.log(`x:${x}, y:${y}`);
 
-            // canvasエリアの高さ・幅を設定
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
+            // Canvasをクリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 画像をCanvasに描画
+            ctx.drawImage(img, 0, 0, 100, 100);
+            // 画像をCanvasの中央に描画
+            // ctx.drawImage(img, x, y, width, height);
 
-            document.getElementById('drawCanvas').width = canvas.width;
-            document.getElementById('drawCanvas').height = canvas.height;
-
-            // 画像を縮小して設定
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-            // 説明文を非表示に
-            // document.getElementById('explanation').style.display = 'none';
         };
         img.src = e.target.result;
     };
