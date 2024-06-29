@@ -768,6 +768,52 @@ class StorageController {
     }
 }
 
+class ScoringSystem {
+    constructor() {
+        this.imageCanvas = document.getElementById('imageCanvas');
+        this.drawCanvas = document.getElementById('drawCanvas');
+
+        this.imageCtx = this.imageCanvas.getContext('2d');
+        this.drawCtx = this.drawCanvas.getContext('2d');
+
+    }
+
+    calculateSimilarity(userData, modelImageData, threshold) {
+        let matchCount = 0;
+        let totalCount = userData.data.length / 4;
+
+        for (let i = 0; i < userData.data.length; i += 4) {
+            const userR = userData.data[i];
+            const userG = userData.data[i + 1];
+            const userB = userData.data[i + 2];
+            const userA = userData.data[i + 3];
+            const modelR = modelImageData.data[i];
+            const modelG = modelImageData.data[i + 1];
+            const modelB = modelImageData.data[i + 2];
+            const modelA = modelImageData.data[i + 3];
+
+            if (Math.abs(userR - modelR) <= threshold &&
+                Math.abs(userG - modelG) <= threshold &&
+                Math.abs(userB - modelB) <= threshold &&
+                Math.abs(userA - modelA) <= threshold) {
+                matchCount++;
+            }
+        }
+
+        const similarity = (matchCount / totalCount) * 100;
+        return similarity.toFixed(2);
+    }
+
+    computeSimilarity() {
+        const userImageData = this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
+        const modelImageData = this.imageCtx.getImageData(0, 0, this.imageCanvas.width, this.imageCanvas.height);
+        const threshold = 0;
+
+        const similarity = this.calculateSimilarity(userImageData, modelImageData, threshold);
+        console.log(`一致度: ${similarity}%`);
+    }
+}
+
 /*
 ==============================
 インスタンス
@@ -778,11 +824,11 @@ const storageController = new StorageController();
 const positionController = new PositionController(bluetoothController, storageController);
 // toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY
 const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -90, -140, storageController);
-// const replayController = new ReplayController(drawingController, storageController);
 document.addEventListener('DOMContentLoaded', () => {
     replayController = new ReplayController(drawingController, storageController);
     storageController.displayLocalStorageKeys(replayController);
 });
+const scoringSystem = new ScoringSystem();
 
 
 
@@ -791,9 +837,9 @@ document.addEventListener('DOMContentLoaded', () => {
 イベントリスナー
 ==============================
 */
-//toio接続
+// toio接続
 document.getElementById('connectButton').addEventListener('click', () => bluetoothController.connect());
-//toio切断
+// toio切断
 document.getElementById('disconnectButton').addEventListener('click', () => bluetoothController.disconnect());
 // 描画処理
 document.getElementById('startDrawingButton').addEventListener('click', () => {
@@ -867,19 +913,36 @@ document.getElementById('uploadfile').addEventListener('change', function (event
     reader.readAsDataURL(file);
 });
 
+// 画像削除
+document.getElementById('removeImage').addEventListener('click', () => {
+    const imageCanvas = document.getElementById('imageCanvas');
+    const drawCanvas = document.getElementById('drawCanvas');
+    const ctx = imageCanvas.getContext('2d');
+
+    // ファイル選択をクリア
+    document.getElementById('uploadfile').value = '';
+    // Canvasをクリア
+    ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+});
+
 // ローカルストレージデータ取得
 document.addEventListener('DOMContentLoaded', () => {
     storageController.displayLocalStorageKeys(replayController);
 });
 
-//リプレイ
+// リプレイ
 document.getElementById('replayDraw-start').addEventListener('click', () => {
     replayController.startReplay();
 });
 
-//リプレイ停止
+// リプレイ停止
 document.getElementById('replayDraw-stop').addEventListener('click', () => {
     replayController.stopReplay();
+});
+
+// 採点
+document.getElementById('calculate-similarity').addEventListener('click', () => {
+    scoringSystem.computeSimilarity();
 });
 
 
