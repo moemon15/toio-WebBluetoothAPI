@@ -459,21 +459,21 @@ class DrawingController {
     }
 
     // 画像が設定された場合にCanvasのサイズを変更
-    updateCanvasSizeForImage = (img) => {
-        this.canvasWidth = img.width;
-        console.log(`update.canvasWidth：${this.canvasWidth}`);
-        this.canvasHeight = img.height;
-        console.log(`update.canvasHeight：${this.canvasHeight}`);
-        // this.scaleX = this.canvasWidth / this.toioMatWidth;
-        // this.scaleY = this.canvasHeight / this.toioMatHeight;
-        console.log(this.scaleX);
-        console.log(this.scaleY);
-        // CSSの表示サイズも同じに設定
-        this.displayWidth = img.width;
-        console.log(`update.displayWidth:${this.displayWidth}`);
-        this.displayHeight = img.height;
-        this.setCanvas();
-    }
+    // updateCanvasSizeForImage = (img) => {
+    //     this.canvasWidth = img.width;
+    //     console.log(`update.canvasWidth：${this.canvasWidth}`);
+    //     this.canvasHeight = img.height;
+    //     console.log(`update.canvasHeight：${this.canvasHeight}`);
+    //     // this.scaleX = this.canvasWidth / this.toioMatWidth;
+    //     // this.scaleY = this.canvasHeight / this.toioMatHeight;
+    //     console.log(this.scaleX);
+    //     console.log(this.scaleY);
+    //     // CSSの表示サイズも同じに設定
+    //     this.displayWidth = img.width;
+    //     console.log(`update.displayWidth:${this.displayWidth}`);
+    //     this.displayHeight = img.height;
+    //     this.setCanvas();
+    // }
 
     // Canvasを初期設定に戻す
     resetCanvasSize = () => {
@@ -811,39 +811,113 @@ class ScoringSystem {
 
     }
 
-    calculateSimilarity(userData, modelImageData, threshold) {
+    /*
+    calculateSimilarity(userData, modelImageData, targetColor, tolerance) {
         let matchCount = 0;
-        let totalCount = userData.data.length / 4;
+        let modelColorCount = 0;
+        let userDrawnPixelCount = 0;
 
-        for (let i = 0; i < userData.data.length; i += 4) {
+        for (let i = 0; i < modelImageData.data.length; i += 4) {
             const userR = userData.data[i];
             const userG = userData.data[i + 1];
             const userB = userData.data[i + 2];
-            const userA = userData.data[i + 3];
             const modelR = modelImageData.data[i];
             const modelG = modelImageData.data[i + 1];
             const modelB = modelImageData.data[i + 2];
-            const modelA = modelImageData.data[i + 3];
 
-            if (Math.abs(userR - modelR) <= threshold &&
-                Math.abs(userG - modelG) <= threshold &&
-                Math.abs(userB - modelB) <= threshold &&
-                Math.abs(userA - modelA) <= threshold) {
-                matchCount++;
+            if (Math.abs(modelR - targetColor.r) <= tolerance &&
+                Math.abs(modelG - targetColor.g) <= tolerance &&
+                Math.abs(modelB - targetColor.b) <= tolerance) {
+                if (Math.abs(userR - modelR) <= tolerance &&
+                    Math.abs(userG - modelG) <= tolerance &&
+                    Math.abs(userB - modelB) <= tolerance) {
+                    matchCount++;
+                    // 一致している箇所を青でマーキング
+                    userData.data[i] = 0;     // R
+                    userData.data[i + 1] = 0;   // G
+                    userData.data[i + 2] = 255;   // B
+                    userData.data[i + 3] = 255; // A
+                } else {
+                    // 一致していない箇所を赤でマーキング
+                    userData.data[i] = 255;     // R
+                    userData.data[i + 1] = 0;   // G
+                    userData.data[i + 2] = 0;   // B
+                    userData.data[i + 3] = 255; // A
+                }
             }
         }
 
+        this.drawCtx.putImageData(userData, 0, 0); // マーキングされたイメージをキャンバスに描画
         const similarity = (matchCount / totalCount) * 100;
         return similarity.toFixed(2);
     }
+    */
+   
+    // ユークリッド距離
+    calculateSimilarity(userData, modelImageData, targetColor, tolerance) {
+        let matchCount = 0;
+        let modelColorCount = 0;
+        let userDrawnPixelCount = 0;
 
-    computeSimilarity() {
+        for (let i = 0; i < modelImageData.data.length; i += 4) {
+            const modelR = modelImageData.data[i];
+            const modelG = modelImageData.data[i + 1];
+            const modelB = modelImageData.data[i + 2];
+
+            const colorDistanceModel = Math.sqrt(
+                Math.pow(modelR - targetColor.r, 2) +
+                Math.pow(modelG - targetColor.g, 2) +
+                Math.pow(modelB - targetColor.b, 2)
+            );
+
+            if (colorDistanceModel <= tolerance) {
+                modelColorCount++;
+
+                const userR = userData.data[i];
+                const userG = userData.data[i + 1];
+                const userB = userData.data[i + 2];
+                const userA = userData.data[i + 3];
+
+                if (userA !== 0) { // ユーザーが描画した部分を特定
+                    userDrawnPixelCount++;
+
+                    const colorDistanceUser = Math.sqrt(
+                        Math.pow(userR - modelR, 2) +
+                        Math.pow(userG - modelG, 2) +
+                        Math.pow(userB - modelB, 2)
+                    );
+
+                    if (colorDistanceUser <= tolerance) {
+                        matchCount++;
+                        // 一致している箇所を青でマーキング
+                        userData.data[i] = 0;     // R
+                        userData.data[i + 1] = 0;   // G
+                        userData.data[i + 2] = 255;   // B
+                        userData.data[i + 3] = 255; // A
+                    } else {
+                        // 一致していない箇所を赤でマーキング
+                        userData.data[i] = 255;     // R
+                        userData.data[i + 1] = 0;   // G
+                        userData.data[i + 2] = 0;   // B
+                        userData.data[i + 3] = 255; // A
+                    }
+                }
+            }
+        }
+
+        this.drawCtx.putImageData(userData, 0, 0); // マーキングされたイメージをキャンバスに描画
+        const similarity = (matchCount / modelColorCount) * 100;
+        console.log(`モデルピクセルトータル：${modelColorCount} `);
+        console.log(`ユーザーピクセルトータル：${userDrawnPixelCount} `);
+        console.log(`一致数：${ matchCount } `);
+        return similarity.toFixed(2);
+    }
+
+    computeSimilarity(targetColor, tolerance) {
         const userImageData = this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
         const modelImageData = this.imageCtx.getImageData(0, 0, this.imageCanvas.width, this.imageCanvas.height);
-        const threshold = 0;
-
-        const similarity = this.calculateSimilarity(userImageData, modelImageData, threshold);
-        console.log(`一致度: ${similarity}%`);
+        const similarity = this.calculateSimilarity(userImageData, modelImageData, targetColor, tolerance);
+        console.log(`一致度: ${ similarity }% `);
     }
 }
 
@@ -946,7 +1020,7 @@ document.getElementById('uploadfile').addEventListener('change', function (event
             // Canvasエリアの高さ・幅を設定
             imageCanvas.width = toioMatWidth * toioMatScale;
             imageCanvas.height = toioMatHeight * toioMatScale;
-            
+
             drawCanvas.width = imageCanvas.width;
             drawCanvas.height = imageCanvas.height;
 
@@ -996,7 +1070,10 @@ document.getElementById('replayDraw-stop').addEventListener('click', () => {
 
 // 採点
 document.getElementById('calculate-similarity').addEventListener('click', () => {
-    scoringSystem.computeSimilarity();
+    // 一致と判定するモデルの色
+    const targetColor = { r: 74, g: 74, b: 74 };
+    const tolerance = 100; // 許容範囲
+    scoringSystem.computeSimilarity(targetColor, tolerance);
 });
 
 
