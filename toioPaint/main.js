@@ -331,6 +331,8 @@ class DrawingController {
 
         // 描画の有効/無効を制御するフラグ
         this.isDrawingActive = false;
+        // imageCanvasの画像の有無を制御するフラグ
+        this.isImageDrawn = false;
 
         // ペンの初期値を設定
         this.color = '#000000';
@@ -346,23 +348,39 @@ class DrawingController {
         Canvasの「描画バッファーのサイズ」と「表示サイズ」を設定
         ==============================
         */
-
-        // toioマットのサイズを設定
-        this.toioMatWidth = toioMatBottomRightX - toioMatTopLeftX;
-        this.toioMatHeight = toioMatBottomRightY - toioMatTopLeftY;
-
-        // 実際のCanvasのサイズを設定
-        this.canvasWidth = CanvasWidth;
-        this.canvasHeight = CanvasHeight;
-
-        // Canvas表示サイズ (CSS)
-        this.displayWidth = 1400;  // 表示される幅
-        this.displayHeight = 1000; // 表示される高さ
-
         //toioマット座標調整　オフセット
         /* toioマットの座標を0にずらす */
         this.positionRegX = positionRegX;
         this.positionRegY = positionRegY;
+
+        // toioマットのサイズ計算
+        this.toioMatWidth = toioMatBottomRightX - toioMatTopLeftX;
+        this.toioMatHeight = toioMatBottomRightY - toioMatTopLeftY;
+
+        // デバイスピクセル比を取得
+        const dpr = window.devicePixelRatio || 1;
+
+        // ブラウザに表示するCanvasのサイズ
+        // / 任意のサイズ
+        this.displayWidth = 320 * 4.5;
+        // toioマットの縦横比を維持
+        this.displayHeight = this.displayWidth * (this.toioMatHeight / this.toioMatWidth);
+
+        // Canvasサイズの初期設定を保持
+        this.defaultCanvasWidth = this.displayWidth;
+        this.defaultCanvasHeight = this.displayHeight;
+
+        // Canvasのサイズを設定
+        this.canvasWidth = this.defaultCanvasWidth;
+        this.canvasHeight = this.defaultCanvasHeight;
+
+        // Canvas表示サイズ初期設定を保持 (CSS)
+        // this.defaultDisplayWidth = 1400;
+        // this.defaultDisplayHeight = 1000;
+        // Canvas表示サイズ (CSS)
+        // this.displayWidth = this.defaultDisplayWidth;  
+        // this.displayHeight = this.defaultDisplayHeight;
+
 
         // スケール計算
         this.scaleX = this.canvasWidth / this.toioMatWidth;
@@ -427,7 +445,6 @@ class DrawingController {
     */
 
     setCanvas = () => {
-
         // Canvasのサイズを設定
         this.imageCanvas.width = this.canvasWidth;
         this.imageCanvas.height = this.canvasHeight;
@@ -435,18 +452,34 @@ class DrawingController {
         this.drawCanvas.height = this.canvasHeight;
 
         // CSSの表示サイズを設定
-        this.imageCanvas.style.width = `${this.displayWidth}px`;
-        this.imageCanvas.style.height = `${this.displayHeight}px`;
-        this.drawCanvas.style.width = `${this.displayWidth}px`;
-        this.drawCanvas.style.height = `${this.displayHeight}px`;
+        // this.imageCanvas.style.width = `${this.displayWidth}px`;
+        // this.imageCanvas.style.height = `${this.displayHeight}px`;
+        // this.drawCanvas.style.width = `${this.displayWidth}px`;
+        // this.drawCanvas.style.height = `${this.displayHeight}px`;
+    }
 
-        // Canvasの縮尺を設定
-        // 既存のスケールをリセット
-        this.imageCtx.setTransform(1, 0, 0, 1, 0, 0);
-        this.imageCtx.scale(this.scaleX, this.scaleY);
-        // 既存のスケールをリセット
-        this.drawCtx.setTransform(1, 0, 0, 1, 0, 0);
-        this.drawCtx.scale(this.scaleX, this.scaleY);
+    // 画像が設定された場合にCanvasのサイズを変更
+    updateCanvasSizeForImage = (img) => {
+        this.canvasWidth = img.width;
+        console.log(`update.canvasWidth：${this.canvasWidth}`);
+        this.canvasHeight = img.height;
+        console.log(`update.canvasHeight：${this.canvasHeight}`);
+        // this.scaleX = this.canvasWidth / this.toioMatWidth;
+        // this.scaleY = this.canvasHeight / this.toioMatHeight;
+        console.log(this.scaleX);
+        console.log(this.scaleY);
+        // CSSの表示サイズも同じに設定
+        this.displayWidth = img.width;
+        console.log(`update.displayWidth:${this.displayWidth}`);
+        this.displayHeight = img.height;
+        this.setCanvas();
+    }
+
+    // Canvasを初期設定に戻す
+    resetCanvasSize = () => {
+        this.canvasWidth = this.defaultCanvasWidth;
+        this.canvasHeight = this.defaultCanvasHeight;
+        this.setCanvas();
     }
 
     /*
@@ -515,8 +548,8 @@ class DrawingController {
 
     /* 描画処理 */
     draw = (info) => {
-        const toX = info.x + this.positionRegX;
-        const toY = info.y + this.positionRegY;
+        const toX = (info.x + this.positionRegX) * this.scaleX;
+        const toY = (info.y + this.positionRegY) * this.scaleY;
 
         const PixeltoX = (info.x + this.positionRegX) * this.scaleX;
         const PixeltoY = (info.y + this.positionRegY) * this.scaleY;
@@ -823,7 +856,7 @@ const bluetoothController = new BluetoothController();
 const storageController = new StorageController();
 const positionController = new PositionController(bluetoothController, storageController);
 // toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY
-const drawingController = new DrawingController(90, 130, 410, 370, 1920, 1080, -90, -140, storageController);
+const drawingController = new DrawingController(90, 130, 410, 370, 320, 240, -90, -140, storageController);
 document.addEventListener('DOMContentLoaded', () => {
     replayController = new ReplayController(drawingController, storageController);
     storageController.displayLocalStorageKeys(replayController);
@@ -889,24 +922,40 @@ document.getElementById('uploadfile').addEventListener('change', function (event
     reader.onload = function (e) {
         const img = new Image();
         img.onload = function () {
-            const canvas = document.getElementById('imageCanvas');
-            const ctx = canvas.getContext('2d');
+            const imageCanvas = document.getElementById('imageCanvas');
+            const drawCanvas = document.getElementById('drawCanvas');
+            const imageCtx = imageCanvas.getContext('2d');
+            const drawCtx = drawCanvas.getContext('2d');
 
-            // 画像のアスペクト比を維持しながら、Canvasのサイズに合わせて描画
-            // const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-            // const width = img.width * scale;
-            // const height = img.height * scale;
-            // const x = (canvas.width - width) / 2;
-            // const y = (canvas.height - height) / 2;
-            // console.log(`x:${x}, y:${y}`);
+            const toioMatWidth = drawingController.toioMatWidth;
+            const toioMatHeight = drawingController.toioMatHeight;
+
+            // canvasエリアと画像のスケールを計算（縦・横 スケール値が低い方を採用）
+            const scale = Math.min(
+                document.getElementById('canvas-area').clientWidth / img.naturalWidth,
+                document.getElementById('canvas-area').clientHeight / img.naturalHeight
+            );
+
+            // 画像の縮小後の幅と高さを計算
+            const scaledWidth = img.naturalWidth * scale;
+            const scaledHeight = img.naturalHeight * scale;
+
+            // toioマットの比率を維持するためのスケール
+            const toioMatScale = Math.min(scaledWidth / toioMatWidth, scaledHeight / toioMatHeight);
+
+            // Canvasエリアの高さ・幅を設定
+            imageCanvas.width = toioMatWidth * toioMatScale;
+            imageCanvas.height = toioMatHeight * toioMatScale;
+            
+            drawCanvas.width = imageCanvas.width;
+            drawCanvas.height = imageCanvas.height;
 
             // Canvasをクリア
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // 画像をCanvasに描画
-            ctx.drawImage(img, 0, 0, 100, 100);
-            // 画像をCanvasの中央に描画
-            // ctx.drawImage(img, x, y, width, height);
+            imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
 
+            imageCtx.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
+
+            drawingController.isImageDrawn = true;
         };
         img.src = e.target.result;
     };
@@ -923,6 +972,11 @@ document.getElementById('removeImage').addEventListener('click', () => {
     document.getElementById('uploadfile').value = '';
     // Canvasをクリア
     ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+
+    // Canvasサイズを初期設定に戻す
+    drawingController.resetCanvasSize();
+
+    drawingController.isImageDrawn = false;
 });
 
 // ローカルストレージデータ取得
