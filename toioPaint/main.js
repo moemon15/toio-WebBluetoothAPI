@@ -2,6 +2,7 @@
 
 // 変数のグローバル定義
 let replayController;
+let canvasToToio;
 
 class BluetoothController {
     static TOIO_SERVICE_UUID = "10b20100-5b3b-4571-9508-cf3efcd7bbae";
@@ -97,6 +98,25 @@ class BluetoothController {
             }
         } catch (error) {
             console.log("Argh! " + error);
+        }
+    }
+
+    async sendToioCommand(command, characteristicType) {
+        
+        if (this.devices.size > 0) {
+            for (const [deviceId, deviceInfo] of this.devices.entries()) {
+                console.log("Device ID:", deviceId); // デバイスIDをログに出力
+                console.log("Device Info:", deviceInfo); // deviceInfoの内容をログに出力
+
+                if (deviceInfo.characteristics && deviceInfo.characteristics[characteristicType]) {
+                    console.log("Writing command to motor...");
+                    await deviceInfo.characteristics[characteristicType].writeValue(command);
+                } else {
+                    console.log(`デバイスID:${deviceId}の${characteristicType} characteristicが見つかりません`);
+                }
+            }
+        } else {
+            console.log('デバイスが接続されていません');
         }
     }
 }
@@ -759,7 +779,7 @@ class StorageController {
         this.storage.setItem(deviceName, JSON.stringify(data));
     }
 
-    displayLocalStorageKeys(replayController) {
+    displayLocalStorageKeys(replayController, canvasToToio) {
         const localStorageKeys = Object.keys(this.storage);
         const ulElement = document.getElementById('localStorageKeys');
         ulElement.innerHTML = ''; // Clear existing content
@@ -767,7 +787,9 @@ class StorageController {
         localStorageKeys.forEach(key => {
             const liElement = document.createElement('li');
             liElement.textContent = key;
-            liElement.addEventListener('click', (event) => this.handleKeyClick(event, key, replayController));
+            liElement.addEventListener('click', (event) => {
+                this.handleKeyClick(event, key, replayController, canvasToToio);
+            });
             liElement.addEventListener('click', this.toggleDetails);
 
             const detailsElement = document.createElement('div');
@@ -790,6 +812,12 @@ class StorageController {
             replayController.drawStoragePoints(key);
         } else {
             console.error('ReplayController is not defined');
+        }
+
+        if (canvasToToio) {
+            canvasToToio.getStorageData(key);
+        } else {
+            console.error('CanvasToToio is not defined');
         }
     }
 
@@ -861,7 +889,7 @@ class ScoringSystem {
         let matchCount = 0;
         let modelColorCount = 0;
         let userDrawnPixelCount = 0;
-    
+
         // ユーザーが描画したピクセル数をカウント
         /*
         ==================== 
@@ -875,36 +903,36 @@ class ScoringSystem {
                 userDrawnPixelCount++;
             }
         }
-    
+
         // drawCanvasのピクセルデータを基にループ
         for (let i = 0; i < userData.data.length; i += 4) {
             const userR = userData.data[i];
             const userG = userData.data[i + 1];
             const userB = userData.data[i + 2];
             const userA = userData.data[i + 3];
-            
+
             // ユーザーが描画した部分を特定
             if (userA !== 0) {
                 if (i < modelImageData.data.length) {
                     const modelR = modelImageData.data[i];
                     const modelG = modelImageData.data[i + 1];
                     const modelB = modelImageData.data[i + 2];
-    
+
                     const colorDistanceModel = Math.sqrt(
                         Math.pow(modelR - targetColor.r, 2) +
                         Math.pow(modelG - targetColor.g, 2) +
                         Math.pow(modelB - targetColor.b, 2)
                     );
-    
+
                     if (colorDistanceModel <= tolerance) {
                         modelColorCount++;
-    
+
                         const colorDistanceUser = Math.sqrt(
                             Math.pow(userR - modelR, 2) +
                             Math.pow(userG - modelG, 2) +
                             Math.pow(userB - modelB, 2)
                         );
-    
+
                         if (colorDistanceUser <= tolerance) {
                             matchCount++;
                             // 一致している箇所を青でマーキング
@@ -923,7 +951,7 @@ class ScoringSystem {
                 }
             }
         }
-        
+
         // マーキング部分をキャンバスに描画
         this.drawCtx.putImageData(userData, 0, 0);
         const similarity = (matchCount / userDrawnPixelCount) * 100;
@@ -932,13 +960,63 @@ class ScoringSystem {
         console.log(`一致数：${matchCount} `);
         return similarity.toFixed(2);
     }
-    
+
     computeSimilarity(targetColor, tolerance) {
         const userImageData = this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
         const modelImageData = this.imageCtx.getImageData(0, 0, this.imageCanvas.width, this.imageCanvas.height);
         const similarity = this.calculateSimilarity(userImageData, modelImageData, targetColor, tolerance);
         console.log(`一致度: ${similarity}% `);
         alert(`あなたの点数は${similarity}点です`);
+    }
+}
+
+class CanvasToToio {
+    constructor(bluetoothController, storageController) {
+        this.bluetoothController = bluetoothController;
+        this.storageController = storageController;
+        this.storageData = {};
+        this.responseMotorControl = { controlType: 0, controlValue: 0, responseContent: 0 };
+    }
+
+    getStorageData(deviceName) {
+        this.storageData = this.storageController.getData(deviceName);
+    }
+
+    startReplay = () => {
+        this.toioPoints();
+    }
+
+    toioPoints = async () =>{
+        for (let i = 0; i <= this.storageData.length; i++) {
+            const sensorX = this.storageData[i].sensorX;
+            const sensorY = this.storageData[i].sensorY;
+            const sensorAngle = this.storageData[i].sensorAngle;
+            await this.moveTo(sensorX, sensorY, sensorAngle);
+        }
+    }
+
+    async moveTo(x, y, angle) {
+
+        let buffer = new ArrayBuffer(13);
+        let dataView = new DataView(buffer);
+
+        dataView.setUint8(0, 0x03);
+        dataView.setUint8(1, 0x00);
+        dataView.setUint8(2, 0x05);
+        dataView.setUint8(3, 0x00);
+        dataView.setUint8(4, 0x50);
+        dataView.setUint8(5, 0x00);
+        dataView.setUint8(6, 0x00);
+        dataView.setUint16(7, x, true);
+        dataView.setUint16(9, y, true);
+        dataView.setUint16(11, angle, true);
+
+        let motorBuffer = new Uint8Array(buffer);
+        await this.bluetoothController.sendToioCommand(motorBuffer, 'motor');
+    }
+
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 
@@ -952,9 +1030,11 @@ const storageController = new StorageController();
 const positionController = new PositionController(bluetoothController, storageController);
 // toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY
 const drawingController = new DrawingController(90, 130, 410, 370, 320, 240, -90, -140, storageController);
+// const canvasToToio = new CanvasToToio(bluetoothController, storageController);
 document.addEventListener('DOMContentLoaded', () => {
     replayController = new ReplayController(drawingController, storageController);
-    storageController.displayLocalStorageKeys(replayController);
+    canvasToToio = new CanvasToToio(bluetoothController, storageController);
+    storageController.displayLocalStorageKeys(replayController, canvasToToio);
 });
 const scoringSystem = new ScoringSystem();
 
@@ -1093,7 +1173,8 @@ document.getElementById('replayDraw-stop').addEventListener('click', () => {
 document.getElementById('calculate-similarity').addEventListener('click', () => {
     // 一致と判定するモデルの色
     const targetColor = { r: 74, g: 74, b: 74 };
-    const tolerance = 100; // 許容範囲
+    // 許容範囲
+    const tolerance = 100;
     scoringSystem.computeSimilarity(targetColor, tolerance);
 });
 
