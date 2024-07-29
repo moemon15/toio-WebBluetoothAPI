@@ -513,7 +513,12 @@ class DrawingController {
         this.storageController.updateDrawingState(this.color, this.alpha, this.lineWidth);
     }
 
-
+    // toio座標をCanvas座標に変換するメソッド
+    toioToCanvasCoords(x, y) {
+        const canvasX = (x + this.positionRegX) * this.scaleX;
+        const canvasY = (y + this.positionRegY) * this.scaleY;
+        return { x: canvasX, y: canvasY };
+    }
 
     //Canvasクリア
     clearCanvas = () => {
@@ -548,8 +553,7 @@ class DrawingController {
 
     /* 描画処理 */
     draw = (info) => {
-        const toX = (info.x + this.positionRegX) * this.scaleX;
-        const toY = (info.y + this.positionRegY) * this.scaleY;
+        const { x: toX, y: toY } = this.toioToCanvasCoords(info.x, info.y);
 
         const PixeltoX = (info.x + this.positionRegX) * this.scaleX;
         const PixeltoY = (info.y + this.positionRegY) * this.scaleY;
@@ -690,10 +694,8 @@ class ReplayController {
     }
 
     ReplayDraw = (fromInfo, toInfo) => {
-        const fromX = fromInfo.x + this.drawingController.positionRegX;
-        const fromY = fromInfo.y + this.drawingController.positionRegY;
-        const toX = toInfo.x + this.drawingController.positionRegX;
-        const toY = toInfo.y + this.drawingController.positionRegY;
+        const { x: fromX, y: fromY } = this.drawingController.toioToCanvasCoords(fromInfo.x, fromInfo.y);
+        const { x: toX, y: toY } = this.drawingController.toioToCanvasCoords(toInfo.x, toInfo.y);
 
         this.drawingController.drawCtx.beginPath();
         this.drawingController.drawCtx.strokeStyle = toInfo.color || this.drawingController.color;
