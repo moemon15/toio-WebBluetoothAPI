@@ -1178,6 +1178,12 @@ document.getElementById('calculate-similarity').addEventListener('click', () => 
     scoringSystem.computeSimilarity(targetColor, tolerance);
 });
 
+// toioリプレイ開始
+document.getElementById('toio-replay-start').addEventListener('click', () => {
+    console.log('toioリプレイ開始ボタンがクリックされました');
+    canvasToToio.startReplay();
+});
+
 
 
 
