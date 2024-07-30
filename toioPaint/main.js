@@ -102,7 +102,7 @@ class BluetoothController {
     }
 
     async sendToioCommand(command, characteristicType) {
-        
+
         if (this.devices.size > 0) {
             for (const [deviceId, deviceInfo] of this.devices.entries()) {
                 console.log("Device ID:", deviceId); // デバイスIDをログに出力
@@ -785,15 +785,65 @@ class StorageController {
         ulElement.innerHTML = ''; // Clear existing content
 
         localStorageKeys.forEach(key => {
+            // li要素
             const liElement = document.createElement('li');
-            liElement.textContent = key;
-            liElement.addEventListener('click', (event) => {
-                this.handleKeyClick(event, key, replayController, canvasToToio);
+
+            // div要素
+            const outerDivElement = document.createElement('div');
+            outerDivElement.className = 'key-item row btn-group btn-group-sm';
+
+            // div-span要素
+            const spanDivElement = document.createElement('div');
+            spanDivElement.className = 'key-item-span col-6 text-center';
+            // キー名を表示するspan要素
+            const keySpan = document.createElement('h5');
+            keySpan.textContent = key;
+            keySpan.className = 'key-name';
+            spanDivElement.appendChild(keySpan);
+
+            // div-button要素
+            const buttonDivElement = document.createElement('div');
+            buttonDivElement.className = 'key-item-button col-6 text-center';
+            // 編集ボタン
+            const editButton = document.createElement('button');
+            editButton.textContent = '編集';
+            editButton.setAttribute('type', 'button');
+            editButton.className = 'btn btn-secondary';
+            editButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.editKey(key, keySpan)
             });
-            liElement.addEventListener('click', this.toggleDetails);
+            buttonDivElement.appendChild(editButton);
+
+            // 削除ボタン
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '削除';
+            deleteButton.setAttribute('type', 'button');
+            deleteButton.className = 'btn btn-danger';
+            deleteButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.deleteKey(key, liElement)
+            });
+            buttonDivElement.appendChild(deleteButton);
+
+            outerDivElement.appendChild(spanDivElement);
+            outerDivElement.appendChild(buttonDivElement);
+
+            liElement.appendChild(outerDivElement);
+
+            outerDivElement.addEventListener('click', (event) => {
+                if (event.target === liElement || event.target === keySpan) {
+                    // 他の全ての要素から 'selected' クラスを削除
+                    ulElement.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+                    // クリックされた要素に 'selected' クラスを追加
+                    liElement.classList.add('selected');
+                    this.handleKeyClick(event, key, replayController, canvasToToio);
+                }
+            });
 
             const detailsElement = document.createElement('div');
             detailsElement.className = 'details';
+            detailsElement.style.display = 'none';
             detailsElement.textContent = `${key}: ${this.storage.getItem(key)}`;
 
             ulElement.appendChild(liElement);
@@ -801,11 +851,24 @@ class StorageController {
         });
     }
 
-    // クリックイベントハンドラ
-    // クリックイベントのハンドラを変更
-    // handleKeyClick(event, key, replayController) {
-    //     replayController.drawStoragePoints(key);
-    // }
+    editKey(oldKey, keySpan) {
+        const newKey = prompt('新しいキー名を入力してください:', oldKey);
+        if (newKey && newKey !== oldKey) {
+            const value = this.storage.getItem(oldKey);
+            this.storage.setItem(newKey, value);
+            this.storage.removeItem(oldKey);
+            keySpan.textContent = newKey;
+            this.displayLocalStorageKeys(); // リストを更新
+        }
+    }
+
+    deleteKey(key, liElement) {
+        if (confirm(`"${key}"を削除してもよろしいですか？`)) {
+            this.storage.removeItem(key);
+            liElement.remove();
+            this.displayLocalStorageKeys(); // リストを更新
+        }
+    }
 
     handleKeyClick(event, key, replayController) {
         if (replayController) {
@@ -986,7 +1049,7 @@ class CanvasToToio {
         this.toioPoints();
     }
 
-    toioPoints = async () =>{
+    toioPoints = async () => {
         for (let i = 0; i <= this.storageData.length; i++) {
             const sensorX = this.storageData[i].sensorX;
             const sensorY = this.storageData[i].sensorY;
