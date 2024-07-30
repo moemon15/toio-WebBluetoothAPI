@@ -2,6 +2,7 @@
 
 // 変数のグローバル定義
 let replayController;
+let canvasToToio;
 
 class BluetoothController {
     static TOIO_SERVICE_UUID = "10b20100-5b3b-4571-9508-cf3efcd7bbae";
@@ -97,6 +98,25 @@ class BluetoothController {
             }
         } catch (error) {
             console.log("Argh! " + error);
+        }
+    }
+
+    async sendToioCommand(command, characteristicType) {
+
+        if (this.devices.size > 0) {
+            for (const [deviceId, deviceInfo] of this.devices.entries()) {
+                console.log("Device ID:", deviceId); // デバイスIDをログに出力
+                console.log("Device Info:", deviceInfo); // deviceInfoの内容をログに出力
+
+                if (deviceInfo.characteristics && deviceInfo.characteristics[characteristicType]) {
+                    console.log("Writing command to motor...");
+                    await deviceInfo.characteristics[characteristicType].writeValue(command);
+                } else {
+                    console.log(`デバイスID:${deviceId}の${characteristicType} characteristicが見つかりません`);
+                }
+            }
+        } else {
+            console.log('デバイスが接続されていません');
         }
     }
 }
@@ -759,19 +779,71 @@ class StorageController {
         this.storage.setItem(deviceName, JSON.stringify(data));
     }
 
-    displayLocalStorageKeys(replayController) {
+    displayLocalStorageKeys(replayController, canvasToToio) {
         const localStorageKeys = Object.keys(this.storage);
         const ulElement = document.getElementById('localStorageKeys');
         ulElement.innerHTML = ''; // Clear existing content
 
         localStorageKeys.forEach(key => {
+            // li要素
             const liElement = document.createElement('li');
-            liElement.textContent = key;
-            liElement.addEventListener('click', (event) => this.handleKeyClick(event, key, replayController));
-            liElement.addEventListener('click', this.toggleDetails);
+
+            // div要素
+            const outerDivElement = document.createElement('div');
+            outerDivElement.className = 'key-item row btn-group btn-group-sm';
+
+            // div-span要素
+            const spanDivElement = document.createElement('div');
+            spanDivElement.className = 'key-item-span col-6 text-center';
+            // キー名を表示するspan要素
+            const keySpan = document.createElement('h5');
+            keySpan.textContent = key;
+            keySpan.className = 'key-name';
+            spanDivElement.appendChild(keySpan);
+
+            // div-button要素
+            const buttonDivElement = document.createElement('div');
+            buttonDivElement.className = 'key-item-button col-6 text-center';
+            // 編集ボタン
+            const editButton = document.createElement('button');
+            editButton.textContent = '編集';
+            editButton.setAttribute('type', 'button');
+            editButton.className = 'btn btn-secondary';
+            editButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.editKey(key, keySpan)
+            });
+            buttonDivElement.appendChild(editButton);
+
+            // 削除ボタン
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '削除';
+            deleteButton.setAttribute('type', 'button');
+            deleteButton.className = 'btn btn-danger';
+            deleteButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.deleteKey(key, liElement)
+            });
+            buttonDivElement.appendChild(deleteButton);
+
+            outerDivElement.appendChild(spanDivElement);
+            outerDivElement.appendChild(buttonDivElement);
+
+            liElement.appendChild(outerDivElement);
+
+            outerDivElement.addEventListener('click', (event) => {
+                if (event.target === liElement || event.target === keySpan) {
+                    // 他の全ての要素から 'selected' クラスを削除
+                    ulElement.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+                    // クリックされた要素に 'selected' クラスを追加
+                    liElement.classList.add('selected');
+                    this.handleKeyClick(event, key, replayController, canvasToToio);
+                }
+            });
 
             const detailsElement = document.createElement('div');
             detailsElement.className = 'details';
+            detailsElement.style.display = 'none';
             detailsElement.textContent = `${key}: ${this.storage.getItem(key)}`;
 
             ulElement.appendChild(liElement);
@@ -779,17 +851,36 @@ class StorageController {
         });
     }
 
-    // クリックイベントハンドラ
-    // クリックイベントのハンドラを変更
-    // handleKeyClick(event, key, replayController) {
-    //     replayController.drawStoragePoints(key);
-    // }
+    editKey(oldKey, keySpan) {
+        const newKey = prompt('新しいキー名を入力してください:', oldKey);
+        if (newKey && newKey !== oldKey) {
+            const value = this.storage.getItem(oldKey);
+            this.storage.setItem(newKey, value);
+            this.storage.removeItem(oldKey);
+            keySpan.textContent = newKey;
+            this.displayLocalStorageKeys(); // リストを更新
+        }
+    }
+
+    deleteKey(key, liElement) {
+        if (confirm(`"${key}"を削除してもよろしいですか？`)) {
+            this.storage.removeItem(key);
+            liElement.remove();
+            this.displayLocalStorageKeys(); // リストを更新
+        }
+    }
 
     handleKeyClick(event, key, replayController) {
         if (replayController) {
             replayController.drawStoragePoints(key);
         } else {
             console.error('ReplayController is not defined');
+        }
+
+        if (canvasToToio) {
+            canvasToToio.getStorageData(key);
+        } else {
+            console.error('CanvasToToio is not defined');
         }
     }
 
@@ -861,7 +952,7 @@ class ScoringSystem {
         let matchCount = 0;
         let modelColorCount = 0;
         let userDrawnPixelCount = 0;
-    
+
         // ユーザーが描画したピクセル数をカウント
         /*
         ==================== 
@@ -875,36 +966,36 @@ class ScoringSystem {
                 userDrawnPixelCount++;
             }
         }
-    
+
         // drawCanvasのピクセルデータを基にループ
         for (let i = 0; i < userData.data.length; i += 4) {
             const userR = userData.data[i];
             const userG = userData.data[i + 1];
             const userB = userData.data[i + 2];
             const userA = userData.data[i + 3];
-            
+
             // ユーザーが描画した部分を特定
             if (userA !== 0) {
                 if (i < modelImageData.data.length) {
                     const modelR = modelImageData.data[i];
                     const modelG = modelImageData.data[i + 1];
                     const modelB = modelImageData.data[i + 2];
-    
+
                     const colorDistanceModel = Math.sqrt(
                         Math.pow(modelR - targetColor.r, 2) +
                         Math.pow(modelG - targetColor.g, 2) +
                         Math.pow(modelB - targetColor.b, 2)
                     );
-    
+
                     if (colorDistanceModel <= tolerance) {
                         modelColorCount++;
-    
+
                         const colorDistanceUser = Math.sqrt(
                             Math.pow(userR - modelR, 2) +
                             Math.pow(userG - modelG, 2) +
                             Math.pow(userB - modelB, 2)
                         );
-    
+
                         if (colorDistanceUser <= tolerance) {
                             matchCount++;
                             // 一致している箇所を青でマーキング
@@ -923,7 +1014,7 @@ class ScoringSystem {
                 }
             }
         }
-        
+
         // マーキング部分をキャンバスに描画
         this.drawCtx.putImageData(userData, 0, 0);
         const similarity = (matchCount / userDrawnPixelCount) * 100;
@@ -932,13 +1023,63 @@ class ScoringSystem {
         console.log(`一致数：${matchCount} `);
         return similarity.toFixed(2);
     }
-    
+
     computeSimilarity(targetColor, tolerance) {
         const userImageData = this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
         const modelImageData = this.imageCtx.getImageData(0, 0, this.imageCanvas.width, this.imageCanvas.height);
         const similarity = this.calculateSimilarity(userImageData, modelImageData, targetColor, tolerance);
         console.log(`一致度: ${similarity}% `);
         alert(`あなたの点数は${similarity}点です`);
+    }
+}
+
+class CanvasToToio {
+    constructor(bluetoothController, storageController) {
+        this.bluetoothController = bluetoothController;
+        this.storageController = storageController;
+        this.storageData = {};
+        this.responseMotorControl = { controlType: 0, controlValue: 0, responseContent: 0 };
+    }
+
+    getStorageData(deviceName) {
+        this.storageData = this.storageController.getData(deviceName);
+    }
+
+    startReplay = () => {
+        this.toioPoints();
+    }
+
+    toioPoints = async () => {
+        for (let i = 0; i <= this.storageData.length; i++) {
+            const sensorX = this.storageData[i].sensorX;
+            const sensorY = this.storageData[i].sensorY;
+            const sensorAngle = this.storageData[i].sensorAngle;
+            await this.moveTo(sensorX, sensorY, sensorAngle);
+        }
+    }
+
+    async moveTo(x, y, angle) {
+
+        let buffer = new ArrayBuffer(13);
+        let dataView = new DataView(buffer);
+
+        dataView.setUint8(0, 0x03);
+        dataView.setUint8(1, 0x00);
+        dataView.setUint8(2, 0x05);
+        dataView.setUint8(3, 0x00);
+        dataView.setUint8(4, 0x50);
+        dataView.setUint8(5, 0x00);
+        dataView.setUint8(6, 0x00);
+        dataView.setUint16(7, x, true);
+        dataView.setUint16(9, y, true);
+        dataView.setUint16(11, angle, true);
+
+        let motorBuffer = new Uint8Array(buffer);
+        await this.bluetoothController.sendToioCommand(motorBuffer, 'motor');
+    }
+
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 
@@ -952,9 +1093,11 @@ const storageController = new StorageController();
 const positionController = new PositionController(bluetoothController, storageController);
 // toioMatTopLeftX, toioMatTopLeftY, toioMatBottomRightX, toioMatBottomRightY, CanvasWidth, CanvasHeight, positionRegX, positionRegY
 const drawingController = new DrawingController(90, 130, 410, 370, 320, 240, -90, -140, storageController);
+// const canvasToToio = new CanvasToToio(bluetoothController, storageController);
 document.addEventListener('DOMContentLoaded', () => {
     replayController = new ReplayController(drawingController, storageController);
-    storageController.displayLocalStorageKeys(replayController);
+    canvasToToio = new CanvasToToio(bluetoothController, storageController);
+    storageController.displayLocalStorageKeys(replayController, canvasToToio);
 });
 const scoringSystem = new ScoringSystem();
 
@@ -1093,8 +1236,15 @@ document.getElementById('replayDraw-stop').addEventListener('click', () => {
 document.getElementById('calculate-similarity').addEventListener('click', () => {
     // 一致と判定するモデルの色
     const targetColor = { r: 74, g: 74, b: 74 };
-    const tolerance = 100; // 許容範囲
+    // 許容範囲
+    const tolerance = 100;
     scoringSystem.computeSimilarity(targetColor, tolerance);
+});
+
+// toioリプレイ開始
+document.getElementById('toio-replay-start').addEventListener('click', () => {
+    console.log('toioリプレイ開始ボタンがクリックされました');
+    canvasToToio.startReplay();
 });
 
 
